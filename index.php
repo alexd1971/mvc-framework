@@ -1,9 +1,9 @@
 <?php
-require_once 'core/Loader.php';
+use core\Framework;
+require_once 'core/Framework.php';
 
-$config = include 'app/config/main.php';
+Framework::initialize();
 
-spl_autoload_register('\core\Loader::autoLoad');
+Framework::registerApplication(new \app\Application());
 
-$application = new \app\Application();
-$application->run();
+Framework::application()->run();

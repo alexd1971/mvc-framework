@@ -40,7 +40,12 @@ class Controller {
 	 */
 	public function __call($action, $args){
 		$function = "_$action";
-		$this->$function($args);
+		if(method_exists($this, $function)){
+			$this->$function($args);
+		}
+		else{
+//TODO: Вставить обработку 404 ошибки
+		}
 	}
 	/**
 	 * Действие по умолчанию для контроллера

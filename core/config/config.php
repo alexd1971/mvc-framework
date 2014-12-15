@@ -12,12 +12,10 @@ return array(
 	"loader" => "core/Loader.php",
 
 	/**
-	 * Каталог приложения
-	 *
-	 * Каталог, в котором размещается пользовательское приложение
+	 * Пространство имен приложения
 	 */
 
-	"appFolder" => "app",
+	"appNamespace" => "app",
 
 	"include_path" => array(),
 );

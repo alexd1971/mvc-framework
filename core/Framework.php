@@ -12,13 +12,21 @@ class Framework{
 	 */
 	public static $config;
 	/**
+	 * Стартовый каталог, в котором находится index.php приложения
+	 * 
+	 * @var string
+	 */
+	public static $index_base;
+	/**
 	 * Инициализайия фреймворка
 	 */
 	public static function initialize(){
 
 		self::$config = include 'config/config.php';
-		require_once $_SERVER['DOCUMENT_ROOT'].'/'.self::$config['loader'];
-		spl_autoload_register('Loader::autoLoad');
+		preg_match('@^/(.*)/index.php$@', $_SERVER['SCRIPT_NAME'], $matches);
+		self::$index_base = $_SERVER['DOCUMENT_ROOT'].'/'.($matches?$matches[1]:'');
+		include self::$index_base.'/'.self::$config['loader'];
+		spl_autoload_register('\core\Loader::autoLoad');
 
 	}
 	/**
@@ -44,6 +52,6 @@ class Framework{
 
 	private static $_application;
 
-	private function __construct();
+	private function __construct(){}
 
 }
