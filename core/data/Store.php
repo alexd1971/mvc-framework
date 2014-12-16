@@ -1,4 +1,5 @@
 <?php
+namespace core\data;
 
 class Store {
 	/**
@@ -6,7 +7,21 @@ class Store {
 	 *
 	 * @var string
 	 */
-	var $model;
-
+	var $model = '';
+	/**
+	 * Манипулятор для работы с БД
+	 * 
+	 * @var 
+	 */
+	var $dbConnection = null;
+	/**
+	 * Критерии выборки данных
+	 * 
+	 * @var array
+	 */
 	var $criteria = array();
+	
+	public function __construct(){
+		
+	}
 }

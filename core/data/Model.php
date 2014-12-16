@@ -27,41 +27,15 @@ class Model {
 	 */
 	const HAS_ONE		= 1;
 	const HAS_MANY		= 2;
-
-	/**
-	 * Имя подключения к БД.
-	 * Параметры подключения определяются в конфигурации приложения
-	 * По умолчанию используется подключение с именем 'db'.
-	 * Если для модели, наследующей от данной, необходимо указать иное соединение с БД,
-	 * то в классе этой модели нужно явно переопределить статическое свойство $connection
-	 *
-	 * @var string
-	 */
-	public static $connection = 'db';
-	/**
-	 * Имя таблицы БД
-	 * Требуется явное переопределение в классах-наследниках
-	 *
-	 * @var string
-	 */
-	public static $table = '';
-	/**
-	 * Список атрибутов для выборки
-	 * Если список пустой, то выбираются все поля таблицы.
-	 * Требуется явное переопределение в классах-наследниках.
-	 *
-	 * @var array
-	 */
-	public static $attributes = array();
 	/**
 	 * Состояние данных.
-	 * Возможные варианты: UNCHANGED, INSERT, UPDATE
+	 * Возможные варианты: Model::UNCHANGED, Model::INSERT, Model::UPDATE
 	 *
 	 * @var integer
 	 */
 	var $state;
 	/**
-	 * Отношения мжду моделями данных
+	 * Отношения между моделями данных
 	 * Типы отношений: HAS_ONE, HAS_MANY
 	 *
 	 * array(
@@ -78,16 +52,18 @@ class Model {
 	 * в качестве атрибутов все доступные в таблице поля и инициализирует их значениями null.
 	 *
 	 */
-	public function __construct(){
-
-		if(!self::$attributes){
+	public function __construct($store){
+		if($store instanceof Store){
+			$this->store = $store;
+		}
+		if(!$this->$attributes){
 			try{
-				$db = Framework::application()->dbConnection(self::$connection);
+				$db = $this->store->$dbConnection;
 				if($db){
 					$qr = $db->query ("select * from self::$table limit 0");
 					for($i = 0; $i < $qr->columnCount(); $i++){
 						$columnInfo = $qr->getColumnMeta($i);
-						array_push(self::$attributes, $columnInfo['name']);
+						array_push($this->attributes, $columnInfo['name']);
 					}
 				}
 			}
@@ -96,17 +72,11 @@ class Model {
 			}
 		}
 
-		foreach (self::$attributes as $attribute){
+		foreach ($this->attributes as $attribute){
 			$this->_attributes[$attribute] = null;
 		}
 
 		$this->state = self::INSERT;
-	}
-	/**
-	 * Функция сохраняет значения атрибутов модели в БД, если они были изменены
-	 */
-	public function save(){
-
 	}
 	/**
 	 * "Волшебная" функция возвращает значение атрибута, если он определен.
@@ -162,6 +132,19 @@ class Model {
 			return false;
 		}
 	}
+	/**
+	 * Хранилище, ассоциированное с моделью
+	 * 
+	 * @var Store object
+	 */
+	protected $store = null;
+	/**
+	 * Список атрибутов модели
+	 * Если список пустой, то выбираются все поля таблицы.
+	 *
+	 * @var array
+	 */
+	protected $attributes = array();
 	/**
 	 * Хранилище значений атрибутов модели
 	 *
