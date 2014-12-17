@@ -22,11 +22,13 @@ class Model {
 	 * Данные изменены
 	 */
 	const UPDATE		= 2;
-	/*
-	 * Типы отношения между моделями
+	/**
+	 * Список атрибутов модели
+	 * Если список пустой, то выбираются все поля таблицы.
+	 *
+	 * @var array
 	 */
-	const HAS_ONE		= 1;
-	const HAS_MANY		= 2;
+	public static $attributes = array();
 	/**
 	 * Состояние данных.
 	 * Возможные варианты: Model::UNCHANGED, Model::INSERT, Model::UPDATE
@@ -34,17 +36,6 @@ class Model {
 	 * @var integer
 	 */
 	var $state;
-	/**
-	 * Отношения между моделями данных
-	 * Типы отношений: HAS_ONE, HAS_MANY
-	 *
-	 * array(
-	 * 	'relation_name' => array(self::HAS_MANY, 'model_name', 'relation_attribute'),
-	 * );
-	 *
-	 * @var array
-	 */
-	var $relations = array();
 	/**
 	 * Конструктор класса.
 	 *
@@ -55,28 +46,29 @@ class Model {
 	public function __construct($store){
 		if($store instanceof Store){
 			$this->store = $store;
-		}
-		if(!$this->$attributes){
-			try{
-				$db = $this->store->$dbConnection;
-				if($db){
-					$qr = $db->query ("select * from self::$table limit 0");
-					for($i = 0; $i < $qr->columnCount(); $i++){
-						$columnInfo = $qr->getColumnMeta($i);
-						array_push($this->attributes, $columnInfo['name']);
+			$class = get_class($this);
+			if(!$class::$attributes){
+				try{
+					$db = $this->store->$dbConnection;
+					if($db){
+						$qr = $db->query ("select * from self::$table limit 0");
+						for($i = 0; $i < $qr->columnCount(); $i++){
+							$columnInfo = $qr->getColumnMeta($i);
+							array_push($class::$attributes, $columnInfo['name']);
+						}
 					}
 				}
+				catch (\Exception $e){
+					//TODO: Добавить обработку исключения
+				}
 			}
-			catch (\Exception $e){
-				Framework::application()->dispatchException($e);
+
+			foreach ($class::$attributes as $attribute){
+				$this->_attributes[$attribute] = null;
 			}
-		}
 
-		foreach ($this->attributes as $attribute){
-			$this->_attributes[$attribute] = null;
+			$this->state = self::INSERT;
 		}
-
-		$this->state = self::INSERT;
 	}
 	/**
 	 * "Волшебная" функция возвращает значение атрибута, если он определен.
@@ -134,17 +126,10 @@ class Model {
 	}
 	/**
 	 * Хранилище, ассоциированное с моделью
-	 * 
+	 *
 	 * @var Store object
 	 */
 	protected $store = null;
-	/**
-	 * Список атрибутов модели
-	 * Если список пустой, то выбираются все поля таблицы.
-	 *
-	 * @var array
-	 */
-	protected $attributes = array();
 	/**
 	 * Хранилище значений атрибутов модели
 	 *
