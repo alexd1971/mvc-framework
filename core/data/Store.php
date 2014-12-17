@@ -14,7 +14,7 @@ class Store {
 	 *
 	 * @var
 	 */
-	var $dbConnection = null;
+	var $dbConnection = '';
 	/**
 	 * Имя таблицы БД
 	 *
@@ -79,16 +79,24 @@ class Store {
 	 */
 	public function load(){
 		$dbh = Framework::application()->getDatabaseConnection($this->dbConnection);
-		$model = $this->model;
-		$attributes = $model::$attributes?"\n".join(",\n",$model::$attributes):'*';
-		$criteria = $this->_getCriteriaAsString();
-		$sql = <<<SQL
-select $attributes
-from $this->table $this->alias
-SQL;
-		$sql .= $criteria?"\nwhere $criteria":"";
-		$res = $dbh->query($sql);
-		print_r($res->fetchAll());
+		if($dbh){
+			$model = $this->model;
+			$attributes = $model::$attributes?"\n".join(",\n",array_keys($model::$attributes)):'*';
+			$criteria = $this->_getCriteriaAsString();
+			$sql = "select $attributes\nfrom $this->table $this->alias";
+			$sql .= $criteria?"\nwhere $criteria":"";
+			$res = $dbh->query($sql);
+			if ($res){
+				while ($record = $res->fetch(\PDO::FETCH_ASSOC)){
+					$model = new $this->model($this);
+					foreach (array_keys($model::$attributes) as $attribute){
+						$model->$attribute = $record[$attribute];
+					}
+					$model->state = Model::UNCHANGED;
+					array_push($this->_data, $model);
+				}
+			}
+		}
 	}
 	/**
 	 * Функция сохраняет измененные данные в БД

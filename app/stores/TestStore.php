@@ -10,5 +10,11 @@ class TestStore extends \core\data\Store {
 	var $table = 'users';
 
 	var $alias = 'u';
+	
+	var $criteria = array("or", array(
+			array("between", "id", array(2,8)),
+			array("!=", 'login',"guest")
+			
+	));
 
 }

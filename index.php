@@ -1,5 +1,6 @@
 <?php
 use core\Framework;
+
 require_once 'core/Framework.php';
 
 Framework::initialize();

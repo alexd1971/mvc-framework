@@ -5,6 +5,7 @@ use core\Framework;
 /**
  * Класс Model.
  * Реализует базовый функционал для работы с данными
+ * Модель всегда принадлежит Store и не может существовать отдельно.
  *
  * @author Aleksey.Danilevskiy
  *
@@ -23,12 +24,25 @@ class Model {
 	 */
 	const UPDATE		= 2;
 	/**
-	 * Список атрибутов модели
+	 * Список атрибутов модели с указанием допонительных параметров атрибутов, например, валидаторов
 	 * Если список пустой, то выбираются все поля таблицы.
 	 *
+	 * Общий вид массива такой:
+	 * 
+	 * array(
+	 * 		"attribute1" => array("param1","param2",...),
+	 * 		"attribute2" => array(...),
+	 * 		...
+	 * );
 	 * @var array
 	 */
 	public static $attributes = array();
+	/**
+	 * Имя атрибута, определяющего первичный ключ (идентификатор модели)
+	 * 
+	 * @var string
+	 */
+	public static $primaryKey = '';
 	/**
 	 * Состояние данных.
 	 * Возможные варианты: Model::UNCHANGED, Model::INSERT, Model::UPDATE
@@ -49,12 +63,12 @@ class Model {
 			$class = get_class($this);
 			if(!$class::$attributes){
 				try{
-					$db = $this->store->$dbConnection;
-					if($db){
-						$qr = $db->query ("select * from self::$table limit 0");
-						for($i = 0; $i < $qr->columnCount(); $i++){
-							$columnInfo = $qr->getColumnMeta($i);
-							array_push($class::$attributes, $columnInfo['name']);
+					$dbh = Framework::application()->getDatabaseConnection($store->dbConnection);
+					if($dbh){
+						$res = $dbh->query ("select * from $store->table limit 0");
+						for($i = 0; $i < $res->columnCount(); $i++){
+							$columnInfo = $res->getColumnMeta($i);
+							$class::$attributes[$columnInfo['name']] = null;
 						}
 					}
 				}
@@ -63,7 +77,7 @@ class Model {
 				}
 			}
 
-			foreach ($class::$attributes as $attribute){
+			foreach (array_keys($class::$attributes) as $attribute){
 				$this->_attributes[$attribute] = null;
 			}
 
