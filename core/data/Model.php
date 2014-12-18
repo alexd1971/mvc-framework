@@ -23,15 +23,19 @@ class Model {
 	 * Данные изменены
 	 */
 	const UPDATE		= 2;
+	/*
+	 * Данные удалены
+	 */
+	const DELETE		= 3;
 	/**
-	 * Список атрибутов модели с указанием допонительных параметров атрибутов, например, валидаторов
+	 * Список атрибутов модели
 	 * Если список пустой, то выбираются все поля таблицы.
 	 *
 	 * Общий вид массива такой:
-	 * 
+	 *
 	 * array(
-	 * 		"attribute1" => array("param1","param2",...),
-	 * 		"attribute2" => array(...),
+	 * 		"attribute1",
+	 * 		"attribute2",
 	 * 		...
 	 * );
 	 * @var array
@@ -39,7 +43,7 @@ class Model {
 	public static $attributes = array();
 	/**
 	 * Имя атрибута, определяющего первичный ключ (идентификатор модели)
-	 * 
+	 *
 	 * @var string
 	 */
 	public static $primaryKey = '';
@@ -68,7 +72,7 @@ class Model {
 						$res = $dbh->query ("select * from $store->table limit 0");
 						for($i = 0; $i < $res->columnCount(); $i++){
 							$columnInfo = $res->getColumnMeta($i);
-							$class::$attributes[$columnInfo['name']] = null;
+							$class::$attributes[] = $columnInfo['name'];
 						}
 					}
 				}
@@ -77,11 +81,9 @@ class Model {
 				}
 			}
 
-			foreach (array_keys($class::$attributes) as $attribute){
+			foreach ($class::$attributes as $attribute){
 				$this->_attributes[$attribute] = null;
 			}
-
-			$this->state = self::INSERT;
 		}
 	}
 	/**
@@ -116,6 +118,7 @@ class Model {
 				$this->_attributes[$attribute] = $value;
 				if($this->state == self::UNCHANGED){
 					$this->state = self::UPDATE;
+					$this->store->updated[] = $this;
 				}
 			}
 		}
@@ -149,5 +152,5 @@ class Model {
 	 *
 	 * @var array
 	 */
-	private $_attributes = array();
+	protected $_attributes = array();
 }

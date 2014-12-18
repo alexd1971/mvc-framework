@@ -4,13 +4,13 @@ namespace core\data;
 use core\Framework;
 class Store {
 	/**
-	 * Имя модели данных
+	 * Имя класса модели данных
 	 *
 	 * @var string
 	 */
 	var $model = '';
 	/**
-	 * Манипулятор для работы с БД
+	 * Имя соединения с БД
 	 *
 	 * @var
 	 */
@@ -70,30 +70,43 @@ class Store {
 	 * @var integer
 	 */
 	var $pageSize = 0;
-
-	public function __construct(){
-
-	}
+	/**
+	 * Массив моделей для изменения
+	 * @var array
+	 */
+	public $updated = array();
+	/**
+	 * Массив моделей для вставки
+	 *
+	 * @var array
+	 */
+	public $inserted = array();
+	/**
+	 * Массив моделей для удаления
+	 *
+	 * @var array
+	 */
+	public $deleted = array();
 	/**
 	 * Функция загружает данные в хранилище в соответствии с установленными критериями
 	 */
 	public function load(){
 		$dbh = Framework::application()->getDatabaseConnection($this->dbConnection);
 		if($dbh){
-			$model = $this->model;
-			$attributes = $model::$attributes?"\n".join(",\n",array_keys($model::$attributes)):'*';
+			$modelClass = $this->model;
+			$attributes = $modelClass::$attributes?"\n".join(",\n",array_keys($modelClass::$attributes)):'*';
 			$criteria = $this->_getCriteriaAsString();
 			$sql = "select $attributes\nfrom $this->table $this->alias";
 			$sql .= $criteria?"\nwhere $criteria":"";
 			$res = $dbh->query($sql);
 			if ($res){
 				while ($record = $res->fetch(\PDO::FETCH_ASSOC)){
-					$model = new $this->model($this);
-					foreach (array_keys($model::$attributes) as $attribute){
+					$model = new $modelClass($this);
+					foreach ($model::$attributes as $attribute){
 						$model->$attribute = $record[$attribute];
 					}
+					$this->_data[] = $model;
 					$model->state = Model::UNCHANGED;
-					array_push($this->_data, $model);
 				}
 			}
 		}
@@ -102,7 +115,136 @@ class Store {
 	 * Функция сохраняет измененные данные в БД
 	 */
 	public function save(){
+		if ($this->inserted || $this->updated ||$this->deleted){
+			$dbh = Framework::application()->getDatabaseConnection($this->dbConnection);
+			$modelClass = $this->model;
+			$attributes = $modelClass::$attributes;
+			$pk = array_search($modelClass::$primaryKey, $attributes);
+			if ($pk){
+				unset($attributes[$pk]);
+			}
+			if ($this->inserted){
+				$sql = "insert into $this->table (".join(',',$attributes).") values ";
+				foreach ($this->inserted as $model) {
+					$values = join(',',array_map(function($attribute){
+						return $model->$attribute;
+					}, $attributes));
+					$sql .= "($values),";
+				}
+				$sql = rtrim($sql,',');
+				try{
+					$dbh->exec($sql);
+					foreach ($this->inserted as $model){
+						$model->state = Model::UNCHANGED;
+					}
+					$this->inserted = array();
+				}
+				catch (\Exception $e){
+					//TODO: Добавть обработчик исключения
+				}
+			}
+			if($this->deleted){
+				$sql = "delete from $this->table where $modelClass::$primaryKey in (".join(',', array_map(function($model){
+					return $model->{$model::primaryKey};
+				}, $this->deleted)).")";
+				try{
+					$dbh->exec($sql);
+					$this->deleted = array();
+				}
+				catch (\Exception $e){
+					//TODO: Добавть обработчик исключения
+				}
+			}
+			if($this->updated){
+				$sql = "update $this->table set ".join(',', array_map(function ($attribute){
+					return $attribute."=?";
+				},$attributes));
+				$sth = $dbh->prepare($sql);
+				try {
+					foreach ($this->updated as $model){
+							$sth->execute(array_map(function ($attribute){
+								return $model->$attribute;
+							}, $attributes));
+							$model->state = Model::UNCHANGED;
+					}
+					$this->updated = array();
+				}
+				catch (\Exception $e){
+					//TODO: Добавить обработчик исключения
+				}
+			}
+		}
+	}
+	/**
+	 * Возвращает модель по известному идентификатору (значению первичного ключа)
+	 * Если модели с указанным id нет, то возвращает null
+	 *
+	 * @param multitype $id
+	 * @return <NULL, Model>
+	 */
+	public function getByPrimaryKey($id){
+		$model = null;
+		foreach ($this->data as $model){
+			if($model->{$model::$primaryKey} == $id) break;
+		}
+		return $model;
+	}
+	/**
+	 * Функция добавляет новую модель в хранилище
+	 * Возвращает ссылку на вновь созданный экземпляр модели данных
+	 *
+	 * @param array $attributes
+	 * @return Model
+	 */
+	public function add($attributes = array()){
+		$modelClass = $this->model;
+		$model = new $modelClass($this);
+		if ($attributes) {
+			foreach ($attributes as $attribute => $value){
+				try {
+					$model->$attribute = $value;
+				}
+				catch (\Exception $e) {
+					//TODO: Возможно нужно добавить обработку этого исключения.
+					//Без обработки несуществующие атрибуты молча пропускаются
+				}
+			}
+		}
+		$this->_data[] = $model;
+		$this->inserted[] = $model;
+		$model->state = Model::INSERT;
+		return $model;
+	}
 
+	public function delByPrimaryKey($id) {
+		foreach ($this->data as $key => $model){
+			if ($model->{$model::primaryKey} == $id){
+				$model->state = Model::DELETE;
+				$this->deleted[] = $model;
+				unset($this->_data[$key]);
+			}
+		}
+	}
+	/**
+	 * Функция предоставляет доступ к некоторым явно не определенным свойствам класса.
+	 * В настоящий момент это только свойство 'data' - итератор для обхода всех моделей хранилища.
+	 * Пример использования:
+	 *
+	 * foreach ($store->data as $model){
+	 * 		do somthing...
+	 * }
+	 *
+	 * @param string $property
+	 * @return \ArrayIterator
+	 */
+	public function __get($property){
+		switch ($property){
+			case 'data':
+				return new \ArrayIterator($this->_data);
+			default:
+				$class = get_class($this);
+				throw \Exception("Свойство $class::$property не найдено");
+		}
 	}
 	/**
 	 * Функция возвращает подготовленную строку критериев выборки
@@ -166,6 +308,8 @@ class Store {
 					return $value;
 				}, $criteria[2]);
 				return "$this->alias.".$criteria[1]." ".$criteria[0]." (".join(',', $arguments).")";
+			default:
+				throw \Exception("Ошибка в формате критериев. Недопустимый оператор: $operator");
 		}
 	}
 	/**
