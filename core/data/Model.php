@@ -49,7 +49,7 @@ class Model {
 	public static $primaryKey = '';
 	/**
 	 * Состояние данных.
-	 * Возможные варианты: Model::UNCHANGED, Model::INSERT, Model::UPDATE
+	 * Возможные варианты: Model::UNCHANGED, Model::INSERT, Model::UPDATE, Model::DELETE
 	 *
 	 * @var integer
 	 */

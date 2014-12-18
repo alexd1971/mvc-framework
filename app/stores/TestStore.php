@@ -12,7 +12,7 @@ class TestStore extends \core\data\Store {
 	var $alias = 'u';
 	
 	var $criteria = array("or", array(
-			array("between", "id", array(2,8)),
+			array("between", "id", array(2,9)),
 			array("!=", 'login',"guest")
 			
 	));

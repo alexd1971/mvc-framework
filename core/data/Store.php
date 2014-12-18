@@ -120,16 +120,22 @@ class Store {
 			$modelClass = $this->model;
 			$attributes = $modelClass::$attributes;
 			$pk = array_search($modelClass::$primaryKey, $attributes);
-			if ($pk){
+			if ($pk !== false){
 				unset($attributes[$pk]);
 			}
 			if ($this->inserted){
 				$sql = "insert into $this->table (".join(',',$attributes).") values ";
 				foreach ($this->inserted as $model) {
-					$values = join(',',array_map(function($attribute){
-						return $model->$attribute;
-					}, $attributes));
-					$sql .= "($values),";
+					$values = array();
+					foreach ($attributes as $attribute){
+						$values[] = $model->$attribute;
+					}
+					$values = array_map(function($value){
+						if (gettype($value) == 'string') $value = "'$value'";
+						return $value;
+					},$values);
+					$valuesStr = join(',',$values);
+					$sql .= "($valuesStr),";
 				}
 				$sql = rtrim($sql,',');
 				try{
@@ -141,6 +147,7 @@ class Store {
 				}
 				catch (\Exception $e){
 					//TODO: Добавть обработчик исключения
+					echo $e->getMessage();
 				}
 			}
 			if($this->deleted){
@@ -158,13 +165,16 @@ class Store {
 			if($this->updated){
 				$sql = "update $this->table set ".join(',', array_map(function ($attribute){
 					return $attribute."=?";
-				},$attributes));
+				},$attributes))." where ".$modelClass::$primaryKey."=?";
 				$sth = $dbh->prepare($sql);
 				try {
 					foreach ($this->updated as $model){
-							$sth->execute(array_map(function ($attribute){
-								return $model->$attribute;
-							}, $attributes));
+							$values = array();
+							foreach ($attributes as $attribute){
+								$values[] = $model->$attribute;
+							}
+							$values[] = $model->{$model::$primaryKey};
+							$sth->execute($values);
 							$model->state = Model::UNCHANGED;
 					}
 					$this->updated = array();
@@ -207,6 +217,7 @@ class Store {
 				catch (\Exception $e) {
 					//TODO: Возможно нужно добавить обработку этого исключения.
 					//Без обработки несуществующие атрибуты молча пропускаются
+					echo $e->getMessage();
 				}
 			}
 		}
