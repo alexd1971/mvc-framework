@@ -1,5 +1,7 @@
 <?php
+
 namespace core;
+
 /**
  * Класс контроллер
  * Реализует базовый функционал котроллера web-приложения
@@ -19,18 +21,18 @@ class Controller {
 	 *
 	 * @var array
 	 */
-	var $rules = array();
+	var $rules = array ();
 	/**
 	 * Рендеринг отображения страницы по результатам выполнения действия
 	 *
 	 * @param string $view
 	 * @param array $params
 	 */
-	public function render($view, $params){
-
+	public function render($view, $params) {
 	}
 	/**
-	 * Все действия контроллера размещаются в области видимости protected с префиксом "_". Например, для действия index метод,
+	 * Все действия контроллера размещаются в области видимости protected с префиксом "_".
+	 * Например, для действия index метод,
 	 * выполняющий действие будет называться _index.
 	 * Такой механизм позволяет перед выполнением действия автоматизировать проверку прав на выполнение действия, а также
 	 * автоматизировать вызов пользовательских функций beforeAction и afterAction, где "Action" наименование вызываемого действия
@@ -38,13 +40,12 @@ class Controller {
 	 * @param string $action
 	 * @param array $args
 	 */
-	public function __call($action, $args){
+	public function __call($action, $args) {
 		$function = "_$action";
-		if(method_exists($this, $function)){
-			$this->$function($args);
-		}
-		else{
-//TODO: Вставить обработку 404 ошибки
+		if (method_exists ( $this, $function )) {
+			$this->$function ( $args );
+		} else {
+			// TODO: Вставить обработку 404 ошибки
 		}
 	}
 	/**
@@ -52,10 +53,7 @@ class Controller {
 	 *
 	 * @param unknown $args
 	 */
-	protected function _index($args = array()){
-
+	protected function _index($args = array()) {
 		echo "Hello World!!!";
-
 	}
-
 }
