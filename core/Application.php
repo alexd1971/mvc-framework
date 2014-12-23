@@ -61,7 +61,7 @@ class Application {
 		$requestAction = strtolower ( $this->request->action !== '' ? $this->request->action : $this->controller->defaultAction );
 		$this->controller->$requestAction ( $this->request->arguments );
 		//TODO: Вставить добавление параметра customHeaders
-		extract($this->_content, EXTR_OVERWRITE);
+		extract($this->_contents, EXTR_OVERWRITE);
 		require $this->_appBaseDir . '/' . $this->config['templates'] . '/' . $this->_template . '.php';
 
 	}
@@ -178,7 +178,7 @@ class Application {
 	 */
 	public function addContent ($content){
 		if (is_array($content)){
-			$this->_content = array_merge($this->_content, $content);
+			$this->_contents = array_merge($this->_contents, $content);
 		}
 	}
 	/**
@@ -213,7 +213,8 @@ class Application {
 	 */
 	protected $_loadedAssets = array ();
 	/**
-	 * Ассоциативный массив сгенерированных фрагментов результирующей страницы.
+	 * <h3>Ассоциативный массив сгенерированных фрагментов результирующей страницы.</h3>
+	 * 
 	 * Массив заполняется посредством функции:
 	 *
 	 * Application::addContent(array("contentName" => contentValue));
@@ -226,7 +227,7 @@ class Application {
 	 *
 	 * @var array
 	 */
-	protected $_content = array ();
+	protected $_contents = array ();
 	/**
 	 * Имя шаблона приложения.
 	 * Финальный шаблон, на основе которого генерируется представление приложения.
