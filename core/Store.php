@@ -1,8 +1,8 @@
 <?php
 
-namespace core\data;
+namespace core;
 
-use core\Framework;
+use core\MVCF;
 
 class Store {
 	/**
@@ -103,7 +103,7 @@ class Store {
 	 * Функция загружает данные в хранилище в соответствии с установленными критериями
 	 */
 	public function load() {
-		$dbh = Framework::application ()->getDatabaseConnection ( $this->dbConnection );
+		$dbh = MVCF::application ()->getDatabaseConnection ( $this->dbConnection );
 		if ($dbh) {
 			$modelClass = $this->model;
 			$attributes = $modelClass::$attributes ? "\n" . join ( ",\n", array_keys ( $modelClass::$attributes ) ) : '*';
@@ -128,7 +128,7 @@ class Store {
 	 */
 	public function save() {
 		if ($this->inserted || $this->updated || $this->deleted) {
-			$dbh = Framework::application ()->getDatabaseConnection ( $this->dbConnection );
+			$dbh = MVCF::application ()->getDatabaseConnection ( $this->dbConnection );
 			$modelClass = $this->model;
 			$attributes = $modelClass::$attributes;
 			$pk = array_search ( $modelClass::$primaryKey, $attributes );

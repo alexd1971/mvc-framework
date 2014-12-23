@@ -6,9 +6,8 @@ namespace core;
  * Класс Application
  *
  * Предоставляет базовый функционал работы web-приложения.
- * Реализует метод run() для запуска приложения
  *
- * @author Aleksey.Danilevskiy
+ * @author Алексей Данилевский
  *
  */
 class Application {
@@ -26,19 +25,18 @@ class Application {
 	 */
 	public $request = null;
 	/**
-	 * Имя контроллера по умолчанию
-	 *
-	 * @var string
-	 */
-	public $defaultControllerName = 'Index';
-	/**
 	 * Активный контроллер приложения
 	 *
 	 * @var \core\Controller
 	 */
 	public $controller = null;
+	/**
+	 * Конструктор
+	 */
 	public function __construct() {
-		$this->config = include Framework::$index_base . '/' . Framework::$config ['appNamespace'] . '/config/config.php';
+		$this->_appBaseDir = MVCF::$indexDir . '/' . MVCF::$config ['appNamespace'];
+		$this->config = include $this->_appBaseDir . '/config/config.php';
+		$this->_registeredAssets = array_merge_recursive(MVCF::$config['assets'], $this->config['assets']);
 		$this->request = http\Request::getInstance ();
 	}
 	/**
@@ -49,8 +47,8 @@ class Application {
 		 * Если в запросе указан контроллер, то используем его.
 		 * Иначе - контроллер по умолчанию
 		 */
-		$appNamespace = Framework::$config ['appNamespace'];
-		$requestController = $appNamespace . '\\controllers\\' . ucfirst ( $this->request->controller !== '' ? $this->request->controller : $this->defaultControllerName );
+		$appNamespace = MVCF::$config ['appNamespace'];
+		$requestController = $appNamespace . '\\controllers\\' . ucfirst ( $this->request->controller !== '' ? $this->request->controller : $this->_defaultController );
 		if (class_exists ( $requestController )) {
 			$this->controller = new $requestController ();
 		} else {
@@ -62,6 +60,62 @@ class Application {
 		 */
 		$requestAction = strtolower ( $this->request->action !== '' ? $this->request->action : $this->controller->defaultAction );
 		$this->controller->$requestAction ( $this->request->arguments );
+		//TODO: Вставить добавление параметра customHeaders
+		extract($this->_content, EXTR_OVERWRITE);
+		require $this->_appBaseDir . '/' . $this->config['templates'] . '/' . $this->_template . '.php';
+
+	}
+	/**
+	 * Функция устанавливает значения атрибутов класса.
+	 * Список зарегистрированных атрибутов:
+	 *
+	 * Application::$defaultController
+	 * Application::$template
+	 *
+	 * @param string $attribute
+	 * @param unknown $value
+	 */
+	public function __set($attribute, $value){
+		switch ($attribute) {
+			case 'defaultController':
+				$this->_defaultController = $value;
+				break;
+			case 'template':
+				if (gettype($value) === 'string'){
+					$this->_template = $value;
+				}
+				else {
+					throw \Exception ("Попытка установить недопустимое значение атрибута Application::".$attribute.". Требуется string, а не ".gettype($value));
+				}
+				break;
+			default:
+				throw \Exception ("Свойство $attribute не найдено");
+		}
+	}
+	/**
+	 * Функция возвращает значения атрибутов класса.
+	 * Список зарегистрированных атрибутов:
+	 *
+	 * Application::$defaultController
+	 * Application::$template
+	 * Application::$appBaseDir
+	 *
+	 * @param string $attribute
+	 * @return string
+	 */
+	public function __get($attribute){
+		switch ($attribute) {
+			case 'defaultController':
+				return $this->_defaultController;
+				break;
+			case 'template':
+				return $this->_template;
+			case 'appBaseDir':
+				return $this->_appBaseDir;
+				break;
+			default:
+				throw \Exception ("Свойство $attribute не найдено");
+		}
 	}
 	/**
 	 * Функция возвращает PDO-подключение к БД.
@@ -70,6 +124,7 @@ class Application {
 	 * @param stringn $db
 	 * @return PDO Object
 	 */
+// TODO: Переделать функцию в геттер атрибута
 	public function getDatabaseConnection($db) {
 		if (array_key_exists ( $db, $this->_dbConnections )) {
 			return $this->_dbConnections [$db];
@@ -96,7 +151,48 @@ class Application {
 	 * @param array $config
 	 */
 	public function registerAssets($config) {
+		if (is_array($config)) {
+			array_merge_recursive($this->_registeredAssets, $config);
+		}
 	}
+	/**
+	 * Функция добаляет список дополнений к загружаемым
+	 *
+	 * @param array $list
+	 */
+	public function loadAssets($list){
+		if (is_array($list)) {
+			array_merge($this->_loadedAssets, $list);
+		}
+	}
+	/**
+	 * Функция добавляет готовый фрагмент для вывода в результирующее представление.
+	 * Параметр $content имеет вид:
+	 *
+	 * array("contentName" => contentValue);
+	 *
+	 * При генерации представления данный параметр будет преобразован в переменную с именеи $contentName и
+	 * значением contentValue. Эта переменная будет доступна для использования в шаблоне представления.
+	 *
+	 * @param array $content
+	 */
+	public function addContent ($content){
+		if (is_array($content)){
+			$this->_content = array_merge($this->_content, $content);
+		}
+	}
+	/**
+	 * Корневой каталог приложения (Только чтение)
+	 *
+	 * @var string
+	 */
+	protected $_appBaseDir = '';
+	/**
+	 * Имя контроллера по умолчанию
+	 *
+	 * @var string
+	 */
+	protected $_defaultController = 'Index';
 	/**
 	 * Массив подключений к БД
 	 *
@@ -109,5 +205,35 @@ class Application {
 	 *
 	 * @var array
 	 */
-	protected $_assets = array ();
+	protected $_registeredAssets = array ();
+	/**
+	 * Список идентификаторов дополнений для загрузки
+	 *
+	 * @var array of string
+	 */
+	protected $_loadedAssets = array ();
+	/**
+	 * Ассоциативный массив сгенерированных фрагментов результирующей страницы.
+	 * Массив заполняется посредством функции:
+	 *
+	 * Application::addContent(array("contentName" => contentValue));
+	 *
+	 * На этапе генерации страницы этот массив преобразуется в набор переменных и их значений вида:
+	 *
+	 * $contentName = contentValue; // contentValue может быть любого допустимого типа
+	 *
+	 * Все полученные переменные становятся доступны в шаблоне приложения
+	 *
+	 * @var array
+	 */
+	protected $_content = array ();
+	/**
+	 * Имя шаблона приложения.
+	 * Финальный шаблон, на основе которого генерируется представление приложения.
+	 * Шаблон может использовать в качестве переменных параметры, сконфигурированные с помощью функции
+	 *
+	 * Application::addContent($content);
+	 * @var string
+	 */
+	protected $_template = 'layout';
 }

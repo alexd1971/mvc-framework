@@ -23,14 +23,6 @@ class Controller {
 	 */
 	var $rules = array ();
 	/**
-	 * Рендеринг отображения страницы по результатам выполнения действия
-	 *
-	 * @param string $view
-	 * @param array $params
-	 */
-	public function render($view, $params) {
-	}
-	/**
 	 * Все действия контроллера размещаются в области видимости protected с префиксом "_".
 	 * Например, для действия index метод,
 	 * выполняющий действие будет называться _index.

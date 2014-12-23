@@ -7,7 +7,7 @@ namespace core;
  *
  * Предоставляет функцию для автоматической загрузки классов
  *
- * @author Aleksey.Danilevskiy
+ * @author Алексей Данилевский
  *
  */
 class Loader {
@@ -19,14 +19,12 @@ class Loader {
 	 * @param string $class
 	 */
 	static function autoLoad($class) {
-		$config = Framework::$config;
+		$config = MVCF::$config;
 		$file = implode ( '/', explode ( '\\', $class ) ) . '.php';
 		if (file_exists ( $file )) {
 			include $file;
-		} 		// TODO: Изменить код, чтобы не выполнялся include несуществующего файла
+		}
 		else {
-			$path = implode ( PATH_SEPARATOR, $config ['include_path'] );
-			set_include_path ( get_include_path () . PATH_SEPARATOR . $path );
 			include $class . '.php';
 		}
 	}

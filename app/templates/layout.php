@@ -1,7 +1,3 @@
-<?php
-use core\Framework;
-$app = Framework::application();
-?>
 <!DOCTYPE html>
 <html>
 <head>
@@ -10,10 +6,10 @@ $app = Framework::application();
 <meta name="keywords" content="" />
 <meta name="description" content="" />
 <meta name= "viewport" content= "width=1024" >
-<?php echo $app->customHeaders(); ?>
+<?php echo @$customHeaders; ?>
 </head>
 
 <body>
-<?php $app->content;?>
+<?php echo @$content;?>
 </body>
 </html>

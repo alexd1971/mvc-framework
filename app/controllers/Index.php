@@ -2,19 +2,13 @@
 
 namespace app\controllers;
 
-use core\Framework;
+use core\MVCF;
 
 class Index extends \core\Controller {
+
 	protected function _index($args = array()) {
-		$store = new \app\stores\TestStore ();
-		$store->load ();
-		$store->add ( array (
-				'login' => 'user',
-				'password' => 'pass'
-		) );
-		$store->save ();
-		foreach ( $store->data as $model ) {
-			print_r ( $model );
-		}
+		MVCF::app()->addContent(array(
+			"content" => "<h3>Hello World from my Application!!!</h3>",
+		));
 	}
 }

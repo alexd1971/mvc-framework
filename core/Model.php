@@ -1,15 +1,13 @@
 <?php
 
-namespace core\data;
-
-use core\Framework;
+namespace core;
 
 /**
  * Класс Model.
  * Реализует базовый функционал для работы с данными
  * Модель всегда принадлежит Store и не может существовать отдельно.
  *
- * @author Aleksey.Danilevskiy
+ * @author Алексей Данилевский
  *
  */
 class Model {
@@ -45,46 +43,36 @@ class Model {
 	 */
 	public static $attributes = array ();
 	/**
-	 * Имя атрибута, определяющего первичный ключ (идентификатор модели)
+	 * Имя атрибута, определяющего идентификатор модели
 	 *
 	 * @var string
 	 */
-	public static $primaryKey = '';
+	public static $idAttribute = '';
 	/**
 	 * Состояние данных.
 	 * Возможные варианты: Model::UNCHANGED, Model::INSERT, Model::UPDATE, Model::DELETE
 	 *
 	 * @var integer
 	 */
-	var $state;
+	public $state;
 	/**
 	 * Конструктор класса.
 	 *
 	 * Если в конструкторе-класса наследника не определен список атрибутов, то конструктор выбирает
 	 * в качестве атрибутов все доступные в таблице поля и инициализирует их значениями null.
 	 */
-	public function __construct($store) {
-		if ($store instanceof Store) {
-			$this->store = $store;
-			$class = get_class ( $this );
-			if (! $class::$attributes) {
-				try {
-					$dbh = Framework::application ()->getDatabaseConnection ( $store->dbConnection );
-					if ($dbh) {
-						$res = $dbh->query ( "select * from $store->table limit 0" );
-						for($i = 0; $i < $res->columnCount (); $i ++) {
-							$columnInfo = $res->getColumnMeta ( $i );
-							$class::$attributes [] = $columnInfo ['name'];
-						}
-					}
-				} catch ( \Exception $e ) {
-					// TODO: Добавить обработку исключения
-				}
-			}
-
-			foreach ( $class::$attributes as $attribute ) {
+	public function __construct($store = null) {
+		if (is_a($store, 'Store') || $store === null){
+			$this->_store = $store;
+		}
+		if ($this::$attributes){
+			foreach ( $this::$attributes as $attribute ) {
 				$this->_attributes [$attribute] = null;
 			}
+			$this->state = self::UNCHANGED;
+		}
+		else {
+			throw \Exception ("В создаваемой модели ".get_class($this)." не определено ни одного атрибута");
 		}
 	}
 	/**
@@ -118,7 +106,9 @@ class Model {
 				$this->_attributes [$attribute] = $value;
 				if ($this->state == self::UNCHANGED) {
 					$this->state = self::UPDATE;
-					$this->store->updated [] = $this;
+					if ($this->_store){
+						$this->_store->updated [] = $this;
+					}
 				}
 			}
 		} else {
@@ -144,7 +134,7 @@ class Model {
 	 *
 	 * @var Store object
 	 */
-	protected $store = null;
+	protected $_store;
 	/**
 	 * Хранилище значений атрибутов модели
 	 *
