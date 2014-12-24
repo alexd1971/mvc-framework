@@ -37,6 +37,8 @@ class Application {
 		$this->_appBaseDir = MVCF::$indexDir . '/' . MVCF::$config ['appNamespace'];
 		$this->config = include $this->_appBaseDir . '/config/config.php';
 		$this->_registeredAssets = array_merge_recursive(MVCF::$config['assets'], $this->config['assets']);
+		$this->_loadAssets = array_merge($this->config['loadAssets']);
+		$this->_meta = array_merge($this->config['meta']);
 		$this->request = http\Request::getInstance ();
 	}
 	/**
@@ -60,8 +62,8 @@ class Application {
 		 */
 		$requestAction = strtolower ( $this->request->action !== '' ? $this->request->action : $this->controller->defaultAction );
 		$this->controller->$requestAction ( $this->request->arguments );
-		//TODO: Вставить добавление параметра customHeaders
 		extract($this->_contents, EXTR_OVERWRITE);
+		$customMetaTags = $this->generateCustomMetaTags();
 		require $this->_appBaseDir . '/' . $this->config['templates'] . '/' . $this->_template . '.php';
 
 	}
@@ -71,6 +73,7 @@ class Application {
 	 *
 	 * Application::$defaultController
 	 * Application::$template
+	 * Application::$title
 	 *
 	 * @param string $attribute
 	 * @param unknown $value
@@ -83,6 +86,14 @@ class Application {
 			case 'template':
 				if (gettype($value) === 'string'){
 					$this->_template = $value;
+				}
+				else {
+					throw \Exception ("Попытка установить недопустимое значение атрибута Application::".$attribute.". Требуется string, а не ".gettype($value));
+				}
+				break;
+			case 'title':
+				if (gettype($value) === 'string') {
+					$this->addMeta(array("title" => $value));
 				}
 				else {
 					throw \Exception ("Попытка установить недопустимое значение атрибута Application::".$attribute.". Требуется string, а не ".gettype($value));
@@ -113,8 +124,42 @@ class Application {
 			case 'appBaseDir':
 				return $this->_appBaseDir;
 				break;
+			case 'title':
+				$title = isset ($this->title) ? $this->title : '';
+				return $title;
+				break;
 			default:
 				throw \Exception ("Свойство $attribute не найдено");
+		}
+	}
+	/**
+	 * Функция проверяет наличие установленных значений атрибутов
+	 * Список зарегистрированных атрибутов:
+	 *
+	 * Application::$defaultController
+	 * Application::$appBaseDir
+	 * Application::$template
+	 * Application::$title
+	 *
+	 * @param unknown $attribute
+	 * @return boolean
+	 */
+	public function __isset($attribute) {
+		switch ($attribute) {
+			case 'defaultController':
+				return isset ($this->_defaultController);
+				break;
+			case 'appBaseDir':
+				return isset ($this->_appBaseDir);
+				break;
+			case 'template':
+				return isset ($this->_template);
+				break;
+			case 'title':
+				return isset ($this->_meta['title']);
+				break;
+			default:
+				return false;
 		}
 	}
 	/**
@@ -147,12 +192,14 @@ class Application {
 	}
 	/**
 	 * Функция регистрирует дополнения для включение в приложение
+	 * Дополнения становятся доступными для загрузки. Однако, чтобы они были загружены, это необходимо
+	 * явно указать с помощью функции Application::loadAssets($assets)
 	 *
 	 * @param array $config
 	 */
 	public function registerAssets($config) {
 		if (is_array($config)) {
-			array_merge_recursive($this->_registeredAssets, $config);
+			$this->_registeredAssets = array_merge($this->_registeredAssets, $config);
 		}
 	}
 	/**
@@ -162,7 +209,40 @@ class Application {
 	 */
 	public function loadAssets($list){
 		if (is_array($list)) {
-			array_merge($this->_loadedAssets, $list);
+			$this->_loadAssets = array_merge($this->_loadAssets, $list);
+		}
+	}
+	/**
+	 * Функция регистрирует в приложении мета-информацию, которую необходимо добавить в параметр customMetaTags при генерации представления.
+	 * Этот параметр можно разместить в шаблоне представления в нутри элемента <head> для добавления сответствующей мета-информации на страницу
+	 *
+	 * Аргумент $meta является ассоциативным массивом вида:
+	 *
+	 * array (
+	 * 		"title" => "Заголовок страницы",
+	 *
+	 * 		"meta" => array (
+	 * 			"charset" => "utf-8",
+	 * 			array (
+	 *	 			"name" => "ProgId"
+	 * 				"content" => "FrontPage.Editor.Document"
+	 * 			)
+	 * 		),
+	 *
+	 * 		"base" => array (
+	 * 			"target" => "_blank"
+	 * 		)
+	 * )
+	 *
+	 * Здесь же можно размещать конфигурацию для включения дополнительных скриптов и css. Однако, удобнее использовать для этого работу с дополнениями.
+	 * То есть дополнительные скрипты и css регистрировать в файле конфигурации приложения или налету с помощью функции Application::registerAssets, а затем
+	 * подключать функцией Application::loadAssets. Также для установки значения элемента title можно использовать атрибут MVCF::app()->title
+	 *
+	 * @param array $meta
+	 */
+	public function addMeta ($meta) {
+		if (is_array($meta)) {
+			$this->_meta = array_merge_recursive($this->_meta, $meta);
 		}
 	}
 	/**
@@ -211,10 +291,17 @@ class Application {
 	 *
 	 * @var array of string
 	 */
-	protected $_loadedAssets = array ();
+	protected $_loadAssets = array ();
+	/**
+	 * Дополнительная мета-информация для размещения в <head>
+	 * Для добавления мета-элементов используется функция Application::addMeta($meta);
+	 *
+	 * @var array
+	 */
+	protected $_meta = array ();
 	/**
 	 * <h3>Ассоциативный массив сгенерированных фрагментов результирующей страницы.</h3>
-	 * 
+	 *
 	 * Массив заполняется посредством функции:
 	 *
 	 * Application::addContent(array("contentName" => contentValue));
@@ -237,4 +324,85 @@ class Application {
 	 * @var string
 	 */
 	protected $_template = 'layout';
+	/**
+	 * Функция формирует строку с мета данными для включения в заголовок <head> страницы
+	 *
+	 * @return string
+	 */
+	protected function generateCustomMetaTags () {
+		$metaTags = '';
+		foreach ($this->_meta as $tag => $value) {
+			switch ($tag) {
+				case 'title':
+					$metaTags .= "<title>$value</title>\n";
+					break;
+				case 'meta':
+					if (is_array($value)) {
+						foreach ($value as $key => $value1) {
+							if (gettype($key) === 'string'){
+								$metaTags .= "<meta $key=\"$value1\">\n";
+							}
+							elseif (is_array($value1)) {
+								$metaTag = "<meta ";
+								$attributes = array();
+								foreach ($value1 as $attribute => $value2) {
+									$attributes[] = "$attribute=\"$value2\"";
+								}
+								$metaTag .= implode(' ',$attributes) . ">";
+								$metaTags .= "$metaTag\n";
+							}
+						}
+					}
+					break;
+				case 'base':
+					if (is_array($value)) {
+						$metaTag = "<base ";
+							$attributes = array();
+							foreach ($value as $attribute => $value1) {
+								$attributes[] = "$attribute=\"$value1\"";
+							}
+							$metaTag .= implode(' ',$attributes) . ">";
+							$metaTags .= "$metaTag\n";
+					}
+					break;
+				case 'link':
+					//TODO: Добавить реализацию
+					break;
+				case 'script':
+					//TODO: Добавить реализацию
+					break;
+			}
+		}
+		$loadAssets = array();
+		foreach ($this->_loadAssets as $asset) {
+			$assetConfig = $this->_registeredAssets[$asset];
+			$loadAssets[] = $asset;
+			if (isset ($assetConfig['depends'])){
+				$loadAssets = array_merge($loadAssets, $assetConfig['depends']);
+			}
+		}
+		$loadAssets = array_unique($loadAssets);
+		foreach ($loadAssets as $asset) {
+ 			$assetConfig = $this->_registeredAssets[$asset];
+			if ($assetConfig['type'] == 'javascript') {
+				$metaTag = "<script type=\"text/javascript\" ";
+				if (isset ($assetConfig['url'])) {
+					$metaTag .= "src=\"" . $assetConfig['url'] . "\"></script>\n";
+				}
+				elseif (isset ($assetConfig['text'])) {
+					$metaTag .= ">\n" . $assetConfig['text'] . "</script>\n";
+				}
+			}
+ 			if ($assetConfig['type'] == 'css') {
+				if (isset ($assetConfig['url'])) {
+					$metaTag = "<link rel=\"stylesheet\" href=\"" . $assetConfig['url']. "\">\n";
+				}
+				elseif (isset ($assetConfig['text'])) {
+					$metaTag = "<style type=\"text/css\">\n" . $assetConfig['text'] . "</style>\n";
+				}
+ 			}
+ 			$metaTags .= $metaTag;
+ 		}
+		return $metaTags;
+	}
 }

@@ -25,7 +25,7 @@ return array (
 		/**
 		 * Стандартная конфигурация метаданных фреймворка.
 		 *
-		 * Для загрузки сконфигурированного дополнения необходимо вызвать функцию: MVCF::app()->loadMeta(array("assetName",...));
+		 * Для загрузки сконфигурированного дополнения необходимо вызвать функцию: MVCF::app()->loadAssets(array("assetName",...));
 		 *
 		 * Общий вид конфигурации:
 		 *
@@ -37,19 +37,19 @@ return array (
 		 * 		),
 		 *
 		 * 		"bootstrap-js" => array (
-		 * 				"type" => "javascript",
-		 * 				"url" => "core/assets/js/bootstrap.min.js",
-		 * 				"depends" => array ("jquery", "bootstrap-css"),
+		 * 			"type" => "javascript",
+		 * 			"url" => "core/assets/js/bootstrap.min.js",
+		 * 			"depends" => array ("jquery", "bootstrap-css"),
 		 * 		),
 		 *
 		 * 		"bootstrap-css" => array (
 		 * 			"type" => "css",
 		 * 			"url" => "core/assets/css/bootstrap.min.css"
 		 * 		),
-		 * 
+		 *
 		 * )
 		 */
 
-		"meta" => array (
+		"assets" => array (
 		),
 );
