@@ -34,11 +34,13 @@ class Application {
 	 * Конструктор
 	 */
 	public function __construct() {
-		$this->_appBaseDir = MVCF::$indexDir . '/' . MVCF::$config ['appNamespace'];
-		$this->config = include $this->_appBaseDir . '/config/config.php';
+		$this->_baseDir = MVCF::$indexDir . '/' . MVCF::$config ['appNamespace'];
+		$this->config = include $this->_baseDir . '/config/config.php';
 		$this->_registeredAssets = array_merge_recursive(MVCF::$config['assets'], $this->config['assets']);
 		$this->_loadAssets = array_merge($this->_loadAssets, $this->config['loadAssets']);
 		$this->_meta = array_merge($this->_meta, $this->config['meta']);
+		$viewClassName = $this->config['view'];
+		$this->_view = new $viewClassName;
 		$this->request = http\Request::getInstance ();
 	}
 	/**
@@ -62,17 +64,16 @@ class Application {
 		 */
 		$requestAction = strtolower ( $this->request->action !== '' ? $this->request->action : $this->controller->defaultAction );
 		$this->controller->$requestAction ( $this->request->arguments );
-		extract($this->_contents, EXTR_OVERWRITE);
 		$customMetaTags = $this->generateCustomMetaTags();
-		require $this->_appBaseDir . '/' . $this->config['templates'] . '/' . $this->_template . '.php';
-
+		$this->view->addData(array("customMetaTags" => $customMetaTags));
+		$this->view->render(false);
 	}
 	/**
 	 * Функция устанавливает значения атрибутов класса.
 	 * Список зарегистрированных атрибутов:
 	 *
 	 * Application::$defaultController
-	 * Application::$template
+	 * Application::$view
 	 * Application::$title
 	 *
 	 * @param string $attribute
@@ -83,9 +84,12 @@ class Application {
 			case 'defaultController':
 				$this->_defaultController = $value;
 				break;
-			case 'template':
+			case 'view':
 				if (gettype($value) === 'string'){
-					$this->_template = $value;
+					$this->_view = new $value;
+				}
+				elseif (is_a($value, '\core\View')) {
+					$this->_view = $value;
 				}
 				else {
 					throw \Exception ("Попытка установить недопустимое значение атрибута Application::".$attribute.". Требуется string, а не ".gettype($value));
@@ -108,8 +112,8 @@ class Application {
 	 * Список зарегистрированных атрибутов:
 	 *
 	 * Application::$defaultController
-	 * Application::$template
-	 * Application::$appBaseDir
+	 * Application::$view
+	 * Application::$baseDir
 	 *
 	 * @param string $attribute
 	 * @return string
@@ -119,17 +123,17 @@ class Application {
 			case 'defaultController':
 				return $this->_defaultController;
 				break;
-			case 'template':
-				return $this->_template;
-			case 'appBaseDir':
-				return $this->_appBaseDir;
+			case 'view':
+				return $this->_view;
+			case 'baseDir':
+				return $this->_baseDir;
 				break;
 			case 'title':
 				$title = isset ($this->title) ? $this->title : '';
 				return $title;
 				break;
 			default:
-				throw \Exception ("Свойство $attribute не найдено");
+				throw new \Exception ("Свойство $attribute не найдено");
 		}
 	}
 	/**
@@ -137,8 +141,8 @@ class Application {
 	 * Список зарегистрированных атрибутов:
 	 *
 	 * Application::$defaultController
-	 * Application::$appBaseDir
-	 * Application::$template
+	 * Application::$baseDir
+	 * Application::$view
 	 * Application::$title
 	 *
 	 * @param unknown $attribute
@@ -149,11 +153,11 @@ class Application {
 			case 'defaultController':
 				return isset ($this->_defaultController);
 				break;
-			case 'appBaseDir':
-				return isset ($this->_appBaseDir);
+			case 'baseDir':
+				return isset ($this->_baseDir);
 				break;
-			case 'template':
-				return isset ($this->_template);
+			case 'view':
+				return isset ($this->_view);
 				break;
 			case 'title':
 				return isset ($this->_meta['title']);
@@ -246,27 +250,11 @@ class Application {
 		}
 	}
 	/**
-	 * Функция добавляет готовый фрагмент для вывода в результирующее представление.
-	 * Параметр $content имеет вид:
-	 *
-	 * array("contentName" => contentValue);
-	 *
-	 * При генерации представления данный параметр будет преобразован в переменную с именеи $contentName и
-	 * значением contentValue. Эта переменная будет доступна для использования в шаблоне представления.
-	 *
-	 * @param array $content
-	 */
-	public function addContent ($content){
-		if (is_array($content)){
-			$this->_contents = array_merge($this->_contents, $content);
-		}
-	}
-	/**
 	 * Корневой каталог приложения (Только чтение)
 	 *
 	 * @var string
 	 */
-	protected $_appBaseDir = '';
+	protected $_baseDir = '';
 	/**
 	 * Имя контроллера по умолчанию
 	 *
@@ -300,30 +288,11 @@ class Application {
 	 */
 	protected $_meta = array ();
 	/**
-	 * <h3>Ассоциативный массив сгенерированных фрагментов результирующей страницы.</h3>
-	 *
-	 * Массив заполняется посредством функции:
-	 *
-	 * Application::addContent(array("contentName" => contentValue));
-	 *
-	 * На этапе генерации страницы этот массив преобразуется в набор переменных и их значений вида:
-	 *
-	 * $contentName = contentValue; // contentValue может быть любого допустимого типа
-	 *
-	 * Все полученные переменные становятся доступны в шаблоне приложения
-	 *
-	 * @var array
+	 * Представление приложения.
+	 * 
+	 * @var View
 	 */
-	protected $_contents = array ();
-	/**
-	 * Имя шаблона приложения.
-	 * Финальный шаблон, на основе которого генерируется представление приложения.
-	 * Шаблон может использовать в качестве переменных параметры, сконфигурированные с помощью функции
-	 *
-	 * Application::addContent($content);
-	 * @var string
-	 */
-	protected $_template = 'layout';
+	protected $_view;
 	/**
 	 * Функция формирует строку с мета данными для включения в заголовок <head> страницы
 	 *

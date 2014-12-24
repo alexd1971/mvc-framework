@@ -3,14 +3,14 @@
 namespace core;
 
 /**
- * Класс Model.
- * Реализует базовый функционал для работы с данными
- * Модель всегда принадлежит Store и не может существовать отдельно.
+ * Класс ModelBase.
+ * Базовый класс для создания моделей данных.
+ * Наследники требуют явного определения $attributes и $idAttribute
  *
  * @author Алексей Данилевский
  *
  */
-class Model {
+class ModelBase {
 	/*
 	 * Данные не изменялись
 	 */
@@ -61,10 +61,7 @@ class Model {
 	 * Если в конструкторе-класса наследника не определен список атрибутов, то конструктор выбирает
 	 * в качестве атрибутов все доступные в таблице поля и инициализирует их значениями null.
 	 */
-	public function __construct($store = null) {
-		if (is_a($store, 'Store') || $store === null){
-			$this->_store = $store;
-		}
+	public function __construct() {
 		if ($this::$attributes){
 			foreach ( $this::$attributes as $attribute ) {
 				$this->_attributes [$attribute] = null;
@@ -85,10 +82,16 @@ class Model {
 	 * @return multitype:
 	 */
 	public function __get($attribute) {
-		if (array_key_exists ( $attribute, $this->_attributes )) {
-			return $this->_attributes [$attribute];
-		} else {
-			throw\Exception ( "Атрибут не найден" );
+		switch ($attribute) {
+			case 'store':
+				return $this->_store;
+				break;
+			default:
+				if (array_key_exists ( $attribute, $this->_attributes )) {
+					return $this->_attributes [$attribute];
+				} else {
+					throw\Exception ( "Атрибут не найден" );
+				}
 		}
 	}
 	/**
@@ -101,18 +104,26 @@ class Model {
 	 * @param mixed $value
 	 */
 	public function __set($attribute, $value) {
-		if (array_key_exists ( $attribute, $this->_attributes )) {
-			if ($this->_attributes [$attribute] !== $value) {
-				$this->_attributes [$attribute] = $value;
-				if ($this->state == self::UNCHANGED) {
-					$this->state = self::UPDATE;
-					if ($this->_store){
-						$this->_store->updated [] = $this;
-					}
+		switch ($attribute) {
+			case 'store':
+				if (is_a($value, '\core\Store')) {
+					$this->_store = $value;
 				}
-			}
-		} else {
-			throw\Exception ( "Атрибут не найден" );
+				break;
+			default:
+				if (array_key_exists ( $attribute, $this->_attributes )) {
+					if ($this->_attributes [$attribute] !== $value) {
+						$this->_attributes [$attribute] = $value;
+						if ($this->state == self::UNCHANGED) {
+							$this->state = self::UPDATE;
+							if ($this->_store){
+								$this->_store->updated [] = $this;
+							}
+						}
+					}
+				} else {
+					throw\Exception ( "Атрибут не найден" );
+				}
 		}
 	}
 	/**
@@ -123,10 +134,16 @@ class Model {
 	 * @return boolean
 	 */
 	public function __isset($attribute) {
-		if (array_key_exists ( $attribute, $this->_attributes )) {
-			return true;
-		} else {
-			return false;
+		switch ($attribute) {
+			case 'store':
+				return isset($this->_store);
+				break;
+			default:
+				if (array_key_exists ( $attribute, $this->_attributes )) {
+					return true;
+				} else {
+					return false;
+				}
 		}
 	}
 	/**
