@@ -37,8 +37,8 @@ class Application {
 		$this->_appBaseDir = MVCF::$indexDir . '/' . MVCF::$config ['appNamespace'];
 		$this->config = include $this->_appBaseDir . '/config/config.php';
 		$this->_registeredAssets = array_merge_recursive(MVCF::$config['assets'], $this->config['assets']);
-		$this->_loadAssets = array_merge($this->config['loadAssets']);
-		$this->_meta = array_merge($this->config['meta']);
+		$this->_loadAssets = array_merge($this->_loadAssets, $this->config['loadAssets']);
+		$this->_meta = array_merge($this->_meta, $this->config['meta']);
 		$this->request = http\Request::getInstance ();
 	}
 	/**
