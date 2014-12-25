@@ -35,18 +35,35 @@ class Application {
 	 */
 	public function __construct() {
 		$this->_baseDir = MVCF::$indexDir . '/' . MVCF::$config ['appNamespace'];
-		$this->config = include $this->_baseDir . '/config/config.php';
+		$this->config = include $_SERVER['DOCUMENT_ROOT'] . '/' . $this->_baseDir . '/config/config.php';
 		$this->_registeredAssets = array_merge_recursive(MVCF::$config['assets'], $this->config['assets']);
-		$this->_loadAssets = array_merge($this->_loadAssets, $this->config['loadAssets']);
+		$this->_addAssets = array_merge($this->_addAssets, $this->config['addAssets']);
 		$this->_meta = array_merge($this->_meta, $this->config['meta']);
-		$viewClassName = $this->config['view'];
-		$this->_view = new $viewClassName;
+		$viewConfig = $this->config['view'];
+		$viewClass = isset($viewConfig['class'])?$viewConfig['class']:'\core\View';
+		$this->_view = new $viewClass;
+		if (isset ($viewConfig['template'])) {
+			$this->_view->template = $viewConfig['template'];
+		}
+		if (isset ($viewConfig['return'])) {
+			$this->view->return = $viewConfig['return'];
+		}
 		$this->request = http\Request::getInstance ();
 	}
 	/**
 	 * Функция запуска приложения
 	 */
 	public function run() {
+
+		session_start();
+
+		if (isset ($_SESSION['user'])) {
+			$this->_user = User::loadFromSession();
+		}
+		else {
+			$this->_user = new User;
+			$this->_user->storeInSession();
+		}
 		/**
 		 * Если в запросе указан контроллер, то используем его.
 		 * Иначе - контроллер по умолчанию
@@ -66,7 +83,8 @@ class Application {
 		$this->controller->$requestAction ( $this->request->arguments );
 		$customMetaTags = $this->generateCustomMetaTags();
 		$this->view->addData(array("customMetaTags" => $customMetaTags));
-		$this->view->render(false);
+		$this->view->return = false;
+		$this->view->render();
 	}
 	/**
 	 * Функция устанавливает значения атрибутов класса.
@@ -114,6 +132,7 @@ class Application {
 	 * Application::$defaultController
 	 * Application::$view
 	 * Application::$baseDir
+	 * Application::$user
 	 *
 	 * @param string $attribute
 	 * @return string
@@ -122,16 +141,15 @@ class Application {
 		switch ($attribute) {
 			case 'defaultController':
 				return $this->_defaultController;
-				break;
 			case 'view':
 				return $this->_view;
 			case 'baseDir':
 				return $this->_baseDir;
-				break;
 			case 'title':
 				$title = isset ($this->title) ? $this->title : '';
 				return $title;
-				break;
+			case 'user':
+				return $this->_user;
 			default:
 				throw new \Exception ("Свойство $attribute не найдено");
 		}
@@ -144,6 +162,7 @@ class Application {
 	 * Application::$baseDir
 	 * Application::$view
 	 * Application::$title
+	 * Application::$user
 	 *
 	 * @param unknown $attribute
 	 * @return boolean
@@ -152,16 +171,14 @@ class Application {
 		switch ($attribute) {
 			case 'defaultController':
 				return isset ($this->_defaultController);
-				break;
 			case 'baseDir':
 				return isset ($this->_baseDir);
-				break;
 			case 'view':
 				return isset ($this->_view);
-				break;
 			case 'title':
 				return isset ($this->_meta['title']);
-				break;
+			case 'user':
+				return isset ($this->_user);
 			default:
 				return false;
 		}
@@ -197,7 +214,7 @@ class Application {
 	/**
 	 * Функция регистрирует дополнения для включение в приложение
 	 * Дополнения становятся доступными для загрузки. Однако, чтобы они были загружены, это необходимо
-	 * явно указать с помощью функции Application::loadAssets($assets)
+	 * явно указать с помощью функции Application::addAssets($assets)
 	 *
 	 * @param array $config
 	 */
@@ -211,9 +228,9 @@ class Application {
 	 *
 	 * @param array $list
 	 */
-	public function loadAssets($list){
+	public function addAssets($list){
 		if (is_array($list)) {
-			$this->_loadAssets = array_merge($this->_loadAssets, $list);
+			$this->_addAssets = array_merge($this->_addAssets, $list);
 		}
 	}
 	/**
@@ -240,7 +257,7 @@ class Application {
 	 *
 	 * Здесь же можно размещать конфигурацию для включения дополнительных скриптов и css. Однако, удобнее использовать для этого работу с дополнениями.
 	 * То есть дополнительные скрипты и css регистрировать в файле конфигурации приложения или налету с помощью функции Application::registerAssets, а затем
-	 * подключать функцией Application::loadAssets. Также для установки значения элемента title можно использовать атрибут MVCF::app()->title
+	 * подключать функцией Application::addAssets. Также для установки значения элемента title можно использовать атрибут MVCF::app()->title
 	 *
 	 * @param array $meta
 	 */
@@ -248,6 +265,13 @@ class Application {
 		if (is_array($meta)) {
 			$this->_meta = array_merge_recursive($this->_meta, $meta);
 		}
+	}
+
+	public function redirect($url) {
+
+		header("Location: $url");
+		exit();
+
 	}
 	/**
 	 * Корневой каталог приложения (Только чтение)
@@ -279,7 +303,7 @@ class Application {
 	 *
 	 * @var array of string
 	 */
-	protected $_loadAssets = array ();
+	protected $_addAssets = array ();
 	/**
 	 * Дополнительная мета-информация для размещения в <head>
 	 * Для добавления мета-элементов используется функция Application::addMeta($meta);
@@ -289,10 +313,16 @@ class Application {
 	protected $_meta = array ();
 	/**
 	 * Представление приложения.
-	 * 
+	 *
 	 * @var View
 	 */
 	protected $_view;
+	/**
+	 * Пользователь приложения
+	 *
+	 * @var \core\User
+	 */
+	protected $_user;
 	/**
 	 * Функция формирует строку с мета данными для включения в заголовок <head> страницы
 	 *
@@ -342,21 +372,21 @@ class Application {
 					break;
 			}
 		}
-		$loadAssets = array();
-		foreach ($this->_loadAssets as $asset) {
+		$addAssets = array();
+		foreach ($this->_addAssets as $asset) {
 			$assetConfig = $this->_registeredAssets[$asset];
-			$loadAssets[] = $asset;
 			if (isset ($assetConfig['depends'])){
-				$loadAssets = array_merge($loadAssets, $assetConfig['depends']);
+				$addAssets = array_merge($addAssets, $assetConfig['depends']);
 			}
+			$addAssets[] = $asset;
 		}
-		$loadAssets = array_unique($loadAssets);
-		foreach ($loadAssets as $asset) {
+		$addAssets = array_unique($addAssets);
+		foreach ($addAssets as $asset) {
  			$assetConfig = $this->_registeredAssets[$asset];
 			if ($assetConfig['type'] == 'javascript') {
 				$metaTag = "<script type=\"text/javascript\" ";
 				if (isset ($assetConfig['url'])) {
-					$metaTag .= "src=\"" . $assetConfig['url'] . "\"></script>\n";
+					$metaTag .= "src=\"/" . MVCF::$indexDir . "/" . $assetConfig['url'] . "\"></script>\n";
 				}
 				elseif (isset ($assetConfig['text'])) {
 					$metaTag .= ">\n" . $assetConfig['text'] . "</script>\n";
@@ -364,7 +394,7 @@ class Application {
 			}
  			if ($assetConfig['type'] == 'css') {
 				if (isset ($assetConfig['url'])) {
-					$metaTag = "<link rel=\"stylesheet\" href=\"" . $assetConfig['url']. "\">\n";
+					$metaTag = "<link rel=\"stylesheet\" href=\"/"  . MVCF::$indexDir . "/" . $assetConfig['url']. "\">\n";
 				}
 				elseif (isset ($assetConfig['text'])) {
 					$metaTag = "<style type=\"text/css\">\n" . $assetConfig['text'] . "</style>\n";

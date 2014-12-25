@@ -15,13 +15,23 @@ class Controller {
 	 *
 	 * @var string
 	 */
-	var $defaultAction = 'index';
+	public $defaultAction = 'index';
 	/**
 	 * Правила доступа к контроллеру и его действиям
+	 * Общий вид описания правил:
+	 *
+	 * array(
+	 * 		"action" => array(
+	 * 			"authenticated" => array (array(),"allow"),
+	 * 			"roles" => (array("role1", "role2"), "allow"),
+	 * 			"function" => (array("arg1" => arg1, "arg2" => arg2), "deny"),
+	 * 			"isGuest" => (array(), "deny"),
+	 * 		)
+	 * );
 	 *
 	 * @var array
 	 */
-	var $rules = array ();
+	public $access = array ();
 	/**
 	 * Все действия контроллера размещаются в области видимости protected с префиксом "_".
 	 * Например, для действия index метод,
@@ -47,5 +57,15 @@ class Controller {
 	 */
 	protected function _index($args = array()) {
 		echo "Hello World!!!";
+	}
+	/**
+	 * Функция формирует полный URL по относительному пути (относительно каталога с запускаемым файлом index.php
+	 *
+	 * @param string $path
+	 * @return string
+	 */
+	protected function createURL ($path) {
+		$request = MVCF::app()->request;
+		return $request->request_scheme . '://' . $request->http_host . '/' . MVCF::$indexDir . '/' . $path;
 	}
 }

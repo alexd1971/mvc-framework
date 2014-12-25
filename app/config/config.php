@@ -58,6 +58,7 @@ return array (
 		 */
 
 		"assets" => array (
+
 			"jquery" => array (
 				"type" => "javascript",
 				"url" => "app/assets/js/jquery.min.js"
@@ -79,27 +80,9 @@ return array (
 					"url" => "app/assets/css/font-awesome.min.css"
 			),
 
-			"function_password" => array (
-				"type" => "javascript",
-				"text" => <<<SCRIPT
-function showPassword() {
-
-    var key_attr = $('#key').attr('type');
-
-    if(key_attr != 'text') {
-
-        $('.checkbox').addClass('show');
-        $('#key').attr('type', 'text');
-
-    } else {
-
-        $('.checkbox').removeClass('show');
-        $('#key').attr('type', 'password');
-
-    }
-
-}
-SCRIPT
+			"style" => array (
+					"type" => "css",
+					"url" => "app/assets/css/style.css"
 			),
 
 		),
@@ -108,10 +91,10 @@ SCRIPT
 		 * Дополнения, которые должны включаться на каждой странице приложения
 		 */
 
-		"loadAssets" => array (
+		"addAssets" => array (
+			"style",
 			"bootstrap_js",
 			"font-awesome",
-			"function_password"
 		),
 
 		/**
@@ -119,6 +102,7 @@ SCRIPT
 		 */
 
 		"meta" => array (
+
 			"meta" => array (
 				"charset" => "utf-8",
 				array (
@@ -135,9 +119,6 @@ SCRIPT
 				),
 			),
 
-			"base" => array (
-				"target" => "_blank",
-			),
 		),
 
 		/**
@@ -145,9 +126,17 @@ SCRIPT
 		 * Путь указывается относительно корневого каталога приложения
 		 */
 		"templates"		=> 'templates',
+
 		/**
-		 * Представление, используемое приложением
+		 * Конфигурация представления, используемое приложением
 		 */
-		"view" => '\app\views\Layout',
+
+		"view" => array(
+			// По умолчанию используется класс \core\View
+			//"class" 	=> '\core\View',
+			"template"	=> "base",
+			"return"	=> false
+		),
+
 
 );
