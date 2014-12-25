@@ -84,6 +84,11 @@ return array (
 					"type" => "css",
 					"url" => "app/assets/css/style.css"
 			),
+			"jquery.tagcanvas" => array (
+					"type" => "javascript",
+					"url" => "app/assets/js/jquery.tagcanvas.min.js",
+					"depends" => array("jquery")
+			),
 
 		),
 

@@ -31,25 +31,26 @@ class Auth extends \core\Controller {
 			));
 		}
 		else {
-			if (isset ($request->submit)){
-				if (isset($request->login) && isset($request->password)){
-					$app->user->name = $request->login;
-					$app->user->authenticated = true;
-					$app->user->storeInSession();
-					$referer = isset ($_SESSION['http_referer'])?($_SESSION['http_referer']):($this->createURL(''));
-					$app->redirect($referer);
-				}
+			if (isset($request->email) && isset($request->key)){
+				$app->user->name = $request->email;
+				$app->user->authenticated = true;
+				$app->user->storeInSession();
+				$app->redirect($this->createURL(''));
 			}
 			else {
-				if (isset ($request->http_referer)){
-					$_SESSION['http_referer'] = $request->http_referer;
-				}
 				$loginForm = new \app\views\LoginForm;
-				$app->title = "Вход в систему";
+				$app->title = "Войти в личный кабинет";
 				$app->view->addData(array(
 						"content" => $loginForm->render()
 				));
 			}
 		}
+	}
+	
+	protected function _logout() {
+		
+		session_destroy();
+		MVCF::app()->redirect($this->createURL(''));
+		
 	}
 }

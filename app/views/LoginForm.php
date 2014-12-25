@@ -21,22 +21,23 @@ class LoginForm extends \core\View {
 						"type" => "javascript",
 						"text" => <<<SCRIPT
 function showPassword() {
-
-    var key_attr = $('#password').attr('type');
-
+    
+    var key_attr = $('#key').attr('type');
+    
     if(key_attr != 'text') {
-
+        
         $('.checkbox').addClass('show');
-        $('#password').attr('type', 'text');
-
+        $('#key').attr('type', 'text');
+        
     } else {
-
+        
         $('.checkbox').removeClass('show');
-        $('#password').attr('type', 'password');
-
+        $('#key').attr('type', 'password');
+        
     }
-
+    
 }
+
 SCRIPT
 
 				)
