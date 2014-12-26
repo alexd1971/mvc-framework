@@ -34,7 +34,7 @@ class Application {
 	 * Конструктор
 	 */
 	public function __construct() {
-		$this->_baseDir = MVCF::$indexDir . '/' . MVCF::$config ['appNamespace'];
+		$this->_baseDir = (MVCF::$indexDir?MVCF::$indexDir . '/':'') . MVCF::$config ['appNamespace'];
 		$this->config = include $_SERVER['DOCUMENT_ROOT'] . '/' . $this->_baseDir . '/config/config.php';
 		$this->_registeredAssets = array_merge_recursive(MVCF::$config['assets'], $this->config['assets']);
 		$this->_addAssets = array_merge($this->_addAssets, $this->config['addAssets']);
@@ -386,7 +386,7 @@ class Application {
 			if ($assetConfig['type'] == 'javascript') {
 				$metaTag = "<script type=\"text/javascript\" ";
 				if (isset ($assetConfig['url'])) {
-					$metaTag .= "src=\"/" . MVCF::$indexDir . "/" . $assetConfig['url'] . "\"></script>\n";
+					$metaTag .= "src=\"/" . (MVCF::$indexDir?MVCF::$indexDir . "/":"") . $assetConfig['url'] . "\"></script>\n";
 				}
 				elseif (isset ($assetConfig['text'])) {
 					$metaTag .= ">\n" . $assetConfig['text'] . "</script>\n";
@@ -394,7 +394,7 @@ class Application {
 			}
  			if ($assetConfig['type'] == 'css') {
 				if (isset ($assetConfig['url'])) {
-					$metaTag = "<link rel=\"stylesheet\" href=\"/"  . MVCF::$indexDir . "/" . $assetConfig['url']. "\">\n";
+					$metaTag = "<link rel=\"stylesheet\" href=\"/"  . (MVCF::$indexDir?MVCF::$indexDir . "/":"") . $assetConfig['url']. "\">\n";
 				}
 				elseif (isset ($assetConfig['text'])) {
 					$metaTag = "<style type=\"text/css\">\n" . $assetConfig['text'] . "</style>\n";

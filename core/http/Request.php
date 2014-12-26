@@ -43,8 +43,7 @@ class Request {
 			$key = strtolower($key);
 			$this->$key = $value;
 		}
-
-		preg_match ( '@^(/.*/)index\.php$@', $this->script_name, $matches );
+		preg_match ( '@^(.*)index\.php$@', $this->script_name, $matches );
 		preg_match ( "@^$matches[1]([^.&?]*)$@", $this->request_uri, $matches );
 
 		$params = explode ( '/', $matches ? $matches [1] : '' );

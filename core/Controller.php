@@ -66,6 +66,6 @@ class Controller {
 	 */
 	protected function createURL ($path) {
 		$request = MVCF::app()->request;
-		return $request->request_scheme . '://' . $request->http_host . '/' . MVCF::$indexDir . '/' . $path;
+		return 'http://' . $request->http_host . '/' . (MVCF::$indexDir?MVCF::$indexDir . '/':'') . $path;
 	}
 }
