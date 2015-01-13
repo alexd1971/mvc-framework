@@ -10,6 +10,12 @@ class User {
 	 */
 	public $name = "guest";
 	/**
+	 * Список ролей пользователя
+	 *
+	 * @var unknown
+	 */
+	public $roles = array();
+	/**
 	 * Профиль пользователя
 	 *
 	 * @var \core\Model
@@ -45,6 +51,9 @@ class User {
 
 		if (isset($_SESSION['user'])) {
 			return unserialize($_SESSION['user']);
+		}
+		else {
+			return new get_class($this);
 		}
 
 	}

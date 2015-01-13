@@ -35,7 +35,7 @@ class Auth extends \core\Controller {
 				$app->user->name = $request->email;
 				$app->user->authenticated = true;
 				$app->user->storeInSession();
-				$app->redirect($this->createURL(''));
+				$app->redirect($app->createURL(''));
 			}
 			else {
 				$loginForm = new \app\views\LoginForm;
@@ -46,11 +46,12 @@ class Auth extends \core\Controller {
 			}
 		}
 	}
-	
+
 	protected function _logout() {
-		
+
 		session_destroy();
-		MVCF::app()->redirect($this->createURL(''));
-		
+		$app = MVCF::app();
+		$app->redirect($app->createURL(''));
+
 	}
 }

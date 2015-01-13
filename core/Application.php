@@ -266,7 +266,28 @@ class Application {
 			$this->_meta = array_merge_recursive($this->_meta, $meta);
 		}
 	}
-
+	/**
+	 * Функция формирует полный URL по относительному пути (относительно каталога с запускаемым файлом index.php
+	 *
+	 * @param string $path
+	 * @return string
+	 */
+	public function createURL ($path) {
+		$url = "";
+		if (preg_match('@^http://.*$@', $path) === 1){
+			$url = $path;
+		}
+		else {
+			$request = MVCF::app()->request;
+			$url ='http://' . $request->http_host . '/' . (MVCF::$indexDir?MVCF::$indexDir . '/':'') . $path;
+		}
+		return $url;
+	}
+	/**
+	 * Функция перенаправляет клиента на указанный URL
+	 *
+	 * @param unknown $url
+	 */
 	public function redirect($url) {
 
 		header("Location: $url");

@@ -6,11 +6,21 @@ use core\MVCF;
 
 class Index extends \core\Controller {
 
+	public function __construct(){
+		$this->accessRules = array(
+				array(
+						"users" => array("guest"),
+						"access" => "deny",
+						"redirect" =>"auth/login"
+				),
+				array(
+						"access" => "allow"
+				)
+		);
+	}
+
 	protected function _index($args = array()) {
 		$app = MVCF::app();
-		if (!$app->user->authenticated) {
-			$app->redirect($app->request->http_origin . '/' . MVCF::$indexDir . "/auth/login");
-		}
 		$matrixView = new \app\views\Matrix;
 		$app->title = "Матрица";
 		$app->view->addData(array(
