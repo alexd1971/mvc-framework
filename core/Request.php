@@ -1,6 +1,6 @@
 <?php
 
-namespace core\http;
+namespace core;
 
 class Request {
 	/**

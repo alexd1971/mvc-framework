@@ -25,7 +25,7 @@ class Auth extends \core\Controller {
 					"meta" => array(
 							array(
 									"http-equiv" => "Refresh",
-									"content" => "3; url=" . $this->createURL('')
+									"content" => "5; url=" . $app->createURL('')
 							)
 					)
 			));
@@ -34,6 +34,9 @@ class Auth extends \core\Controller {
 			if (isset($request->email) && isset($request->key)){
 				$app->user->name = $request->email;
 				$app->user->authenticated = true;
+				if (preg_match('/^admin.*$/', $app->user->name) === 1) {
+					$app->user->roles[] = "admin";
+				}
 				$app->user->storeInSession();
 				$app->redirect($app->createURL(''));
 			}

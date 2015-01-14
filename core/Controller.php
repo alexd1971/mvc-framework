@@ -27,6 +27,8 @@ class Controller {
 	 * @param array $args
 	 */
 	public function __call($action, $args) {
+		$args = $args[0];
+		$app = MVCF::app();
 		$rule = $this->accessRule($action);
 		if ($rule['access'] === "allow"){
 			$function = "_$action";
@@ -34,16 +36,18 @@ class Controller {
 				$this->$function ( $args );
 			} else {
 				// TODO: Вставить обработку 404 ошибки
-				echo "Page not found!!!";
+				$app->view->addData(array(
+						"content" => "Запрошенная страница не найдена"
+				));
 			}
 		}
-		elseif (isset($rule['redirect'])){
-				$app = MVCF::app();
+		elseif ($rule['access'] === "deny" && isset($rule['redirect'])){
 				$app->redirect($app->createURL($rule['redirect']));
 		}
-		else {
-			echo "Access denied!!!";
-			// TODO: Добавить обработку запрета доступа по умолчанию
+		elseif($rule['access'] === "deny") {
+			$app->view->addData(array(
+					"content" => "Доступ к запрошенной странице запрещен"
+			));
 		}
 	}
 	/**
@@ -81,7 +85,7 @@ class Controller {
 	 *
 	 * 		array(
 	 * 			"actions" => "action3",
-	 * 			"custom" => array("class" => "CheckerClassName", "params" => array("param1" => value1, ...))
+	 * 			"custom" => "CheckerClassName"
 	 * 		)
 	 *
 	 * 		array(
@@ -131,8 +135,8 @@ class Controller {
 							}
 							break;
 						case "custom":
-							$customChecker = new $value['class'];
-							if (!$customChecker->check($value['params'])){
+							$customChecker = new $value;
+							if (!$customChecker->check()){
 								$match = false;
 								break 2;
 							}

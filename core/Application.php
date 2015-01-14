@@ -48,7 +48,7 @@ class Application {
 		if (isset ($viewConfig['return'])) {
 			$this->view->return = $viewConfig['return'];
 		}
-		$this->request = http\Request::getInstance ();
+		$this->request = Request::getInstance ();
 	}
 	/**
 	 * Функция запуска приложения
@@ -279,7 +279,7 @@ class Application {
 		}
 		else {
 			$request = MVCF::app()->request;
-			$url ='http://' . $request->http_host . '/' . (MVCF::$indexDir?MVCF::$indexDir . '/':'') . $path;
+			$url ='http://' . $request->http_host . '/' . (MVCF::$indexDir?MVCF::$indexDir . '/':'') . ltrim($path, "/");
 		}
 		return $url;
 	}
