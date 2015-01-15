@@ -10,22 +10,18 @@ namespace core;
  * @author Алексей Данилевский
  *
  */
-class ModelBase {
-	/*
-	 * Данные не изменялись
+abstract class Model {
+	/**
+	 * Константы, определяющие состояние модели
+	 * 
+	 * UNCHANGED - данные не изменялись
+	 * INSERT - новые данные
+	 * UPDATE - данные изменились
+	 * DELETE - удалить данные при синхронизации с хранилищем
 	 */
 	const UNCHANGED = 0;
-	/*
-	 * Добавлена новая запись
-	 */
 	const INSERT = 1;
-	/*
-	 * Данные изменены
-	 */
 	const UPDATE = 2;
-	/*
-	 * Данные удалены
-	 */
 	const DELETE = 3;
 	/**
 	 * Список атрибутов модели
@@ -61,12 +57,12 @@ class ModelBase {
 	 * Если в конструкторе-класса наследника не определен список атрибутов, то конструктор выбирает
 	 * в качестве атрибутов все доступные в таблице поля и инициализирует их значениями null.
 	 */
-	public function __construct() {
+	public function __construct($attributes = array()) {
 		if ($this::$attributes){
+			$this->state = self::INSERT;
 			foreach ( $this::$attributes as $attribute ) {
-				$this->_attributes [$attribute] = null;
+				$this->_attributes [$attribute] = key_exists($attribute, $attributes)?$attributes[$attribute]:null;
 			}
-			$this->state = self::UNCHANGED;
 		}
 		else {
 			throw \Exception ("В создаваемой модели ".get_class($this)." не определено ни одного атрибута");
@@ -83,9 +79,6 @@ class ModelBase {
 	 */
 	public function __get($attribute) {
 		switch ($attribute) {
-			case 'store':
-				return $this->_store;
-				break;
 			default:
 				if (array_key_exists ( $attribute, $this->_attributes )) {
 					return $this->_attributes [$attribute];
@@ -105,11 +98,6 @@ class ModelBase {
 	 */
 	public function __set($attribute, $value) {
 		switch ($attribute) {
-			case 'store':
-				if (is_a($value, '\core\Store')) {
-					$this->_store = $value;
-				}
-				break;
 			default:
 				if (array_key_exists ( $attribute, $this->_attributes )) {
 					if ($this->_attributes [$attribute] !== $value) {
@@ -135,9 +123,6 @@ class ModelBase {
 	 */
 	public function __isset($attribute) {
 		switch ($attribute) {
-			case 'store':
-				return isset($this->_store);
-				break;
 			default:
 				if (array_key_exists ( $attribute, $this->_attributes )) {
 					return true;
@@ -146,12 +131,6 @@ class ModelBase {
 				}
 		}
 	}
-	/**
-	 * Хранилище, ассоциированное с моделью
-	 *
-	 * @var Store object
-	 */
-	protected $_store;
 	/**
 	 * Хранилище значений атрибутов модели
 	 *
