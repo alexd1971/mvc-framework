@@ -3,17 +3,17 @@
 namespace core;
 
 /**
- * Класс ModelBase.
+ * Класс Model.
  * Базовый класс для создания моделей данных.
  * Наследники требуют явного определения $attributes и $idAttribute
  *
  * @author Алексей Данилевский
- *
+ *        
  */
 abstract class Model {
 	/**
 	 * Константы, определяющие состояние модели
-	 * 
+	 *
 	 * UNCHANGED - данные не изменялись
 	 * INSERT - новые данные
 	 * UPDATE - данные изменились
@@ -24,27 +24,6 @@ abstract class Model {
 	const UPDATE = 2;
 	const DELETE = 3;
 	/**
-	 * Список атрибутов модели
-	 * Если список пустой, то выбираются все поля таблицы.
-	 *
-	 * Общий вид массива такой:
-	 *
-	 * array(
-	 * "attribute1",
-	 * "attribute2",
-	 * ...
-	 * );
-	 *
-	 * @var array
-	 */
-	public static $attributes = array ();
-	/**
-	 * Имя атрибута, определяющего идентификатор модели
-	 *
-	 * @var string
-	 */
-	public static $idAttribute = '';
-	/**
 	 * Состояние данных.
 	 * Возможные варианты: Model::UNCHANGED, Model::INSERT, Model::UPDATE, Model::DELETE
 	 *
@@ -54,18 +33,28 @@ abstract class Model {
 	/**
 	 * Конструктор класса.
 	 *
-	 * Если в конструкторе-класса наследника не определен список атрибутов, то конструктор выбирает
-	 * в качестве атрибутов все доступные в таблице поля и инициализирует их значениями null.
+	 * Аргумент $attributes является ассоциативным массивом, определяющим начальные значения атрибутов модели.
+	 *
+	 * Пример:
+	 *
+	 * array(
+	 * "attr1" => 'val1',
+	 * "attr2" => 'val2',
+	 * ...
+	 * "attrn" => null // если не нужно инициализировать атрибут, то его значение устанавливается в null
+	 * )
+	 *
+	 * @param array $attributes        	
 	 */
 	public function __construct($attributes = array()) {
-		if ($this::$attributes){
-			$this->state = self::INSERT;
-			foreach ( $this::$attributes as $attribute ) {
-				$this->_attributes [$attribute] = key_exists($attribute, $attributes)?$attributes[$attribute]:null;
+		$class = get_class ( $this );
+		if ($class::$_attributes) {
+			$this->state = self::UNCHANGED;
+			foreach ( $class::$_attributes as $attribute ) {
+				$this->_attrValues [$attribute] = (array_key_exists ( $attribute, $attributes ) ? $attributes [$attribute] : null);
 			}
-		}
-		else {
-			throw \Exception ("В создаваемой модели ".get_class($this)." не определено ни одного атрибута");
+		} else {
+			throw\Exception ( "В создаваемой модели " . $class . " не определено ни одного атрибута" );
 		}
 	}
 	/**
@@ -74,16 +63,19 @@ abstract class Model {
 	 *
 	 * Функция вызывается не явно при попытке получить значение атрибута модели: $model->attribute;
 	 *
-	 * @param string $attribute
+	 * @param string $attribute        	
 	 * @return multitype:
 	 */
 	public function __get($attribute) {
 		switch ($attribute) {
-			default:
-				if (array_key_exists ( $attribute, $this->_attributes )) {
-					return $this->_attributes [$attribute];
+			case "attributes" :
+				$class = get_class ( $this );
+				return $class::$_attributes;
+			default :
+				if (array_key_exists ( $attribute, $this->_attrValues )) {
+					return $this->_attrValues [$attribute];
 				} else {
-					throw\Exception ( "Атрибут не найден" );
+					throw \Exception ( "Атрибут не найден" );
 				}
 		}
 	}
@@ -93,24 +85,21 @@ abstract class Model {
 	 *
 	 * Функция вызывается не явно при попытке установить значение атрибута модели: $model->attribute = $value;
 	 *
-	 * @param string $attribute
-	 * @param mixed $value
+	 * @param string $attribute        	
+	 * @param mixed $value        	
 	 */
 	public function __set($attribute, $value) {
 		switch ($attribute) {
-			default:
-				if (array_key_exists ( $attribute, $this->_attributes )) {
-					if ($this->_attributes [$attribute] !== $value) {
-						$this->_attributes [$attribute] = $value;
+			default :
+				if (array_key_exists ( $attribute, $this->_attrValues )) {
+					if ($this->_attrValues [$attribute] !== $value) {
+						$this->_attrValues [$attribute] = $value;
 						if ($this->state == self::UNCHANGED) {
 							$this->state = self::UPDATE;
-							if ($this->_store){
-								$this->_store->updated [] = $this;
-							}
 						}
 					}
 				} else {
-					throw\Exception ( "Атрибут не найден" );
+					throw \Exception ( "Атрибут не найден" );
 				}
 		}
 	}
@@ -118,13 +107,15 @@ abstract class Model {
 	 * "Волшебная" функция выполняется при попытке проверить наличия атрибута модели: isset($model->attribute);
 	 * Возвращает ture, если атрибут существует, и false, если нет.
 	 *
-	 * @param string $attribute
+	 * @param string $attribute        	
 	 * @return boolean
 	 */
 	public function __isset($attribute) {
 		switch ($attribute) {
-			default:
-				if (array_key_exists ( $attribute, $this->_attributes )) {
+			case "attributes" :
+				return true;
+			default :
+				if (array_key_exists ( $attribute, $this->_attrValues )) {
 					return true;
 				} else {
 					return false;
@@ -132,9 +123,10 @@ abstract class Model {
 		}
 	}
 	/**
-	 * Хранилище значений атрибутов модели
+	 * Список атрибутов модели
 	 *
 	 * @var array
 	 */
-	protected $_attributes = array ();
+	protected static $_attributes = array ();
+	protected $_attrValues = array ();
 }

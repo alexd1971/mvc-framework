@@ -191,7 +191,7 @@ class Application {
 	 * @return PDO Object
 	 */
 // TODO: Переделать функцию в геттер атрибута
-	public function getDatabaseConnection($db) {
+	public function getDBConnection($db) {
 		if (array_key_exists ( $db, $this->_dbConnections )) {
 			return $this->_dbConnections [$db];
 		} elseif (array_key_exists ( $db, $this->config ['dbConnections'] )) {

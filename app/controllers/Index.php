@@ -16,8 +16,7 @@ class Index extends \core\Controller {
 				array(
 						"actions" => array("test"),
 						"custom" => "\app\AccessChecker",
-						"access" => "deny",
-						"redirect" => '/auth/login'
+						"access" => "allow",
 				),
 				array(
 						"access" => "allow"
@@ -37,8 +36,11 @@ class Index extends \core\Controller {
 	protected function _test($args = array()) {
 		$app = MVCF::app();
 		$app->title = "test";
+		$user = \app\models\TestModel::findByAttributes(array(
+				"login" => "user2"
+		));
 		$app->view->addData(array(
-				"content" => "Action test of Index controller. Arguments: ".print_r($args, true)
+				"content" => "Action test of Index controller.<br> Result: ". print_r($user->attributes,true)
 		));
 	}
 }
