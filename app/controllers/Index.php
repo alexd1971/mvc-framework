@@ -36,11 +36,11 @@ class Index extends \core\Controller {
 	protected function _test($args = array()) {
 		$app = MVCF::app();
 		$app->title = "test";
-		$user = \app\models\TestModel::findByAttributes(array(
-				"login" => "user2"
-		));
+		$user = \app\models\TestModel::find(
+				array("like", "login", "user%")
+		);
 		$app->view->addData(array(
-				"content" => "Action test of Index controller.<br> Result: ". print_r($user->attributes,true)
+				"content" => "Action test of Index controller.<br> Result: <pre>". print_r($user,true) . "</pre>"
 		));
 	}
 }

@@ -6,6 +6,7 @@ class TestModel extends \core\SqlDbModel {
 
 	protected static $_dbConnection = 'db';
 	protected static $_table = 'users';
+	protected static $_alias = 'u';
 	protected static $_attributes = array(
 			"id",
 			"login",
