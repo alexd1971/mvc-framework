@@ -8,8 +8,10 @@ namespace core;
  * @author Алексей Данилевский
  *
  */
-abstract class SqlDBModel extends Model {
+abstract class DataBaseModel extends Model {
 	/**
+	 * public static function findByAttributes($criteria = array())
+	 *
 	 * Функция создает модели на основе записей в БД с указанными значеними атрибутов
 	 * Если критериям соответствует единственная запись, то возвращает модель, содержащую данные из этой записи
 	 * Если критериям соответствует несколько записей, то возвращвется массив моделей.
@@ -24,7 +26,7 @@ abstract class SqlDBModel extends Model {
 	 * )
 	 *
 	 * @param array $criteria
-	 * @return SqlDbModel
+	 * @return DataBaseModel
 	 */
 	public static function findByAttributes($criteria = array()) {
 		$class = get_called_class ();
@@ -32,7 +34,7 @@ abstract class SqlDBModel extends Model {
 		$select = join ( ",\n", array_map(function($attr) {
 			$class = get_called_class();
 			return "{$class::$_alias}.$attr";
-		}, $class::$_attributes ));
+		}, array_keys($class::$_attributes) ));
 		$where = "";
 		foreach ( $criteria as $key => $value ) {
 			if ($where !== "") {
@@ -44,6 +46,8 @@ abstract class SqlDBModel extends Model {
 		return $class::findBySql($sql);
 	}
 	/**
+	 * public static function find($criteria)
+	 *
 	 * Функция осуществляет выборку данных из БД в соответствии с критериями
 	 * Возвращает массив моделей SqlDbModel
 	 *
@@ -87,12 +91,14 @@ abstract class SqlDBModel extends Model {
 		$select = join ( ",\n", array_map(function($attr) {
 			$class = get_called_class();
 			return "{$class::$_alias}.$attr";
-		}, $class::$_attributes ));
+		}, array_keys($class::$_attributes) ));
 		$where = $class::_compileCriteria ($criteria);
 		$sql = "select $select\nfrom {$class::$_table} {$class::$_alias}\n" . ($where?"where $where":"");
 		return $class::findBySql($sql);
 	}
 	/**
+	 * public static function findBySql($sql)
+	 *
 	 * Функция конструирует модель на основании SQL-запроса
 	 *
 	 * @param string $sql
@@ -104,7 +110,9 @@ abstract class SqlDBModel extends Model {
 		$stmt->execute ();
 		if ($stmt->errorCode () == 0) {
 			while($record = $stmt->fetch ( \PDO::FETCH_ASSOC )) {
-				$models[] = new $class ( $record );
+				$model = new $class ( $record );
+				$model->state = Model::UNCHANGED;
+				$models[] = $model;
 			}
 		} else {
 			$errors = $stmt->errorInfo ();
@@ -123,18 +131,20 @@ abstract class SqlDBModel extends Model {
 		}
 	}
 	/**
+	 * public static function sync(&$models)
+	 *
 	 * Функция синхронизирует переданный массив моделей с БД
 	 * Синхронизируются только измененные модели
 	 *
 	 * @param array $models
 	 */
-	public static function sync($models) {
+	public static function sync(&$models) {
 		$class = get_called_class();
 		$insert = array();
 		$update = array();
 		$delete = array();
 		foreach ($models as $model){
-			switch($model->status) {
+			switch($model->state) {
 				case self::INSERT:
 					$insert[] = $model;
 					break;
@@ -147,70 +157,85 @@ abstract class SqlDBModel extends Model {
 			}
 		}
 		if ($insert || $update || $delete) {
-			$dbh = MVCF::application ()->getDBConnection ( $class::dbConnection );
-			$attributes = $class::$attributes;
-			$pk = array_search ( $class::$primaryKey, $attributes );
+			$dbh = MVCF::app ()->getDBConnection ( $class::$_dbConnection );
+			$attributes = array_keys($class::$_attributes);
+			$pk = array_search ( $class::$_primaryKey, $attributes );
 			if ($pk !== false) {
 				unset ( $attributes [$pk] );
 			}
 			if ($insert) {
-				$sql = "insert into $this->table (" . join ( ',', $attributes ) . ") values (" . join ( ',', array_map ( function ($attribute) {
+				$sql = "insert into {$class::$_table} (" . join ( ',', $attributes ) . ") values (" . join ( ',', array_map ( function ($attribute) {
 					return '?';
 				}, $attributes ) ) . ")";
 				$sth = $dbh->prepare ( $sql );
-				foreach ( $this->inserted as $model ) {
+				foreach ( $insert as $model ) {
 					$values = array ();
 					foreach ( $attributes as $attribute ) {
 						$values [] = $model->$attribute;
 					}
-					try {
-						$sth->execute ( $values );
-						if ($this->idSequence) {
-							$model->{$model::$primaryKey} = $dbh->lastInsertId ( $this->idSequence );
+					$sth->execute ( $values );
+					if ($sth->errorCode () == 0) {
+						if ($class::$_pkSequence) {
+							$model->{$class::$_primaryKey} = $dbh->lastInsertId ( $class::$_pkSequence );
 						} else {
-							$model->{$model::$primaryKey} = $dbh->lastInsertId ();
+							$model->{$class::$_primaryKey} = $dbh->lastInsertId ();
 						}
-					} catch ( \Exception $e ) {
-						// TODO: Добавть обработчик исключения
-						echo $e->getMessage ();
-					}
-				}
-				$this->inserted = array ();
-			}
-			if ($this->deleted) {
-				$sql = "delete from $this->table where " . $modelClass::$primaryKey . " in (" . join ( ',', array_map ( function ($model) {
-					return $model->{$model::$primaryKey};
-				}, $this->deleted ) ) . ")";
-				try {
-					$dbh->exec ( $sql );
-					$this->deleted = array ();
-				} catch ( \Exception $e ) {
-					// TODO: Добавть обработчик исключения
-				}
-			}
-			if ($this->updated) {
-				$sql = "update $this->table set " . join ( ',', array_map ( function ($attribute) {
-					return $attribute . "=?";
-				}, $attributes ) ) . " where " . $modelClass::$primaryKey . "=?";
-				$sth = $dbh->prepare ( $sql );
-				try {
-					foreach ( $this->updated as $model ) {
-						$values = array ();
-						foreach ( $attributes as $attribute ) {
-							$values [] = $model->$attribute;
-						}
-						$values [] = $model->{$model::$primaryKey};
-						$sth->execute ( $values );
 						$model->state = Model::UNCHANGED;
 					}
-					$this->updated = array ();
-				} catch ( \Exception $e ) {
-					// TODO: Добавить обработчик исключения
+					else {
+						$errors = $stmt->errorInfo ();
+						echo ($errors [2]);
+					}
+				}
+			}
+			if ($delete) {
+				$delList = array();
+				foreach ($delete as $model){
+					$delList[] = $model->{$class::$_primaryKey};
+				}
+				$sql = "delete from {$class::$_table} where {$class::$_primaryKey} in (" . join ( ',', $delList ) . ")";
+				$sth = $dbh->prepare ( $sql );
+				$sth->execute ();
+				if ($sth->errorCode () == 0){
+					foreach ($delete as $model) {
+						$index = array_search($model, $models);
+						if($index !== false) {
+							unset($models[$index]);
+						}
+					}
+				}
+				else {
+					$errors = $sth->errorInfo ();
+					echo ($errors [2]);
+				}
+
+			}
+			if ($update) {
+				$sql = "update {$class::$_table} set " . join ( ',', array_map ( function ($attribute) {
+					return $attribute . "=?";
+				}, $attributes ) ) . " where {$class::$_primaryKey}=?";
+				$sth = $dbh->prepare ( $sql );
+				foreach ( $update as $model ) {
+					$values = array ();
+					foreach ( $attributes as $attribute ) {
+						$values [] = $model->$attribute;
+					}
+					$values [] = $model->{$class::$_primaryKey};
+					$sth->execute ( $values );
+					if ($sth->errorCode () == 0) {
+						$model->state = Model::UNCHANGED;
+					}
+					else {
+						$errors = $sth->errorInfo ();
+						echo ($errors [2]);
+					}
 				}
 			}
 		}
 	}
 	/**
+	 * public function save()
+	 *
 	 * Функция сохраняет текущее состояние модели в БД
 	 *
 	 * Model::UNCHANGED - нмчего не делает
@@ -220,16 +245,84 @@ abstract class SqlDBModel extends Model {
 	 */
 	public function save() {
 		$class = get_class($this);
+		$attributes = $this->attributes;
+		$pk = array_search ( $class::$_primaryKey, $attributes );
+		if ($pk !== false) {
+			unset ( $attributes [$pk] );
+		}
+
+		$dbh = MVCF::app ()->getDBConnection ( $class::$_dbConnection );
+
 		switch ($this->state) {
 			case self::DELETE:
-				$sql = "delete from {$class::$_table} where {$class::$_primaryKey}=$this->{$class::$_primaryKey}";
+				$sql = "delete from {$class::$_table} where {$class::$_primaryKey}=" . $this->{$class::$_primaryKey};
+				$sth = $dbh->prepare($sql);
+				$sth->execute ();
+				if ($sth->errorCode () == 0) {
+					$this->{$class::$_primaryKey} = null;
+					$this->state = Model::INSERT;
+				}
+				else {
+					$errors = $sth->errorInfo ();
+					echo ($errors [2]);
+				}
 				break;
 			case self::UPDATE:
-
+				$sql = "update {$class::$_table} set " . join ( ',', array_map ( function ($attribute) {
+					return "$attribute=?";
+				}, $attributes ) ) . " where {$class::$_primaryKey}=?";
+				$values = array();
+				foreach ($attributes as $attribute) {
+					$values[] = $this->$attribute;
+				}
+				$values [] = $this->{$class::$_primaryKey};
+				$sth = $dbh->prepare($sql);
+				$sth->execute ( $values );
+				if ($sth->errorCode () == 0) {
+					$this->state = self::UNCHANGED;
+				}
+				else {
+					$errors = $sth->errorInfo ();
+					echo ($errors [2]);
+				}
 				break;
 			case self::INSERT:
-
+				$sql = "insert into {$class::$_table} (" . join ( ',', $attributes ) . ") values (" . join ( ',', array_map ( function ($attribute) {
+					return '?';
+				}, $attributes ) ) . ")";
+				$values = array ();
+				foreach ( $attributes as $attribute ) {
+					$values [] = $this->$attribute;
+				}
+				$sth = $dbh->prepare($sql);
+				$sth->execute ( $values );
+				if ($sth->errorCode () == 0) {
+					if ($class::$_pkSequence) {
+						$this->{$class::$_primaryKey} = $dbh->lastInsertId ( $class::$_pkSequence );
+					} else {
+						$this->{$class::$_primaryKey} = $dbh->lastInsertId ();
+					}
+					$this->state = self::UNCHANGED;
+				}
+				else {
+					$errors = $sth->errorInfo ();
+					echo ($errors [2]);
+				}
 				break;
+		}
+	}
+	/**
+	 * public function delete($save = false)
+	 * Функция помечает модель для удаления из БД
+	 * Если параметр $save == true, то выполняется удаление соответствующей записи из БД.
+	 * При этом модель утрачивает значение идентификатора и меняет статус на Model::INSERT
+	 *
+	 * @param boolean $save
+	 */
+	public function delete($save = false) {
+		$this->state = self::DELETE;
+		if ($save) {
+			$this->save();
 		}
 	}
 	/**
@@ -256,6 +349,10 @@ abstract class SqlDBModel extends Model {
 	 * @var string
 	 */
 	protected static $_primaryKey;
+	/**
+	 * Последовательность, используемая для автоинкремента (если поддерживается СУБД)
+	 */
+	protected static $_pkSequence;
 	/**
 	 * Функция возвращает подготовленную строку критериев выборки
 	 *
