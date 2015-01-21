@@ -9,7 +9,12 @@ class TestModel extends \core\DataBaseModel {
 	protected static $_alias = 'u';
 	protected static $_attributes = array(
 			"id" => array(),
-			"login" => array(),
+			"login" => array(
+					array(
+						'\core\validators\EmailValidator',
+						array("message" => "Логин должен быть электронным адресом")
+					)
+			),
 			"password" => array()
 	);
 	protected static $_primaryKey = 'id';

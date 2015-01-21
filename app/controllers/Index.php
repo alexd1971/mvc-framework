@@ -40,12 +40,15 @@ class Index extends \core\Controller {
  		$user = \app\models\TestModel::find(
 				array("=", "login", "user5")
 		);
-
- 		$user->delete(true);
- 		$user->save();
-
+ 		$res = null;
+		if ($user->isValid()){
+			$res=$user;
+		}
+		else {
+			$res = $user->validate();
+		}
 		$app->view->addData(array(
-				"content" => "Action test of Index controller.<br> Result: <pre>". print_r($user,true) . "</pre>"
+				"content" => "Action test of Index controller.<br> Result: <pre>". print_r($res,true) . "</pre>"
 		));
 	}
 }
