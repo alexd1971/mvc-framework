@@ -19,7 +19,7 @@ abstract class Model {
 	 * UPDATE - данные изменились
 	 * DELETE - удалить данные при синхронизации с хранилищем
 	 */
-	const NEW_MODEL	= 0;
+	const BLANK	= 0;
 	const UNCHANGED = 1;
 	const INSERT	= 2;
 	const UPDATE	= 3;
@@ -60,7 +60,7 @@ abstract class Model {
 	public function __construct($attributes = array()) {
 		$class = get_class ( $this );
 		if ($class::$_attributes) {
-			$this->state = self::NEW_MODEL;
+			$this->state = self::BLANK;
 			foreach ( array_keys($class::$_attributes) as $attribute ) {
 				$this->_attrValues [$attribute] = (array_key_exists ( $attribute, $attributes ) ? $attributes [$attribute] : null);
 				if($this->$attribute !== null) {
@@ -99,9 +99,8 @@ abstract class Model {
 			foreach ($class::$_attributes as $attribute => $rules) {
 				if ($rules) {
 					foreach ($rules as $rule) {
-						print_r($rules);
-						$validator = new $rule[0];
-						$params = $rule[1];
+						$validator = new $rule['class'];
+						$params = array_key_exists('params', $rule)? $rule['params']:array();
 						$params['value'] = $this->$attribute;
 						$validationResult = $validator->check($params);
 						$this->_validationResults[$attribute] = $validationResult;
@@ -168,7 +167,7 @@ abstract class Model {
 					if ($this->_attrValues [$attribute] !== $value) {
 						$this->_attrValues [$attribute] = $value;
 						switch ($this->state) {
-							case self::NEW_MODEL:
+							case self::BLANK:
 								$this->state = self::INSERT;
 								break;
 							case self::UNCHANGED:
@@ -218,8 +217,8 @@ abstract class Model {
 	 *
 	 * 		"attribute1" => array(
 	 * 			array(
-	 * 				"\validator\Class1",
-	 * 				array(
+	 * 				"class" => '\validator\Class1',
+	 * 				"params" => array(
 	 * 					"param1" => value1,
 	 * 					"param2 => value2,
 	 * 					...
@@ -227,8 +226,8 @@ abstract class Model {
 	 * 			),	// Первое правило валидации для атрибута
 	 *
 	 * 			array(
-	 * 				"\validator\Class2",
-	 * 				array(
+	 * 				"class" => '\validator\Class2',
+	 * 				"params" => array(
 	 * 					"param3" => value3,
 	 * 					"message" => "Информационное сообщение для пользователя",
 	 * 					...
