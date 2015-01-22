@@ -12,30 +12,11 @@ namespace core;
  */
 class Application {
 	/**
-	 * Настройки приложения
-	 *
-	 * @var array
-	 */
-	public $config = null;
-	/**
-	 * HTTP-запрос клиента.
-	 * Содержит переданные параметры и прочую полезную информацию
-	 *
-	 * @var http\Request
-	 */
-	public $request = null;
-	/**
-	 * Активный контроллер приложения
-	 *
-	 * @var \core\Controller
-	 */
-	public $controller = null;
-	/**
 	 * Конструктор
 	 */
 	public function __construct() {
 		$this->_baseDir = (MVCF::$indexDir?MVCF::$indexDir . '/':'') . MVCF::$config ['appNamespace'];
-		$this->config = include $_SERVER['DOCUMENT_ROOT'] . '/' . $this->_baseDir . '/config/config.php';
+		$this->_config = include $_SERVER['DOCUMENT_ROOT'] . '/' . $this->_baseDir . '/config/config.php';
 		$this->_registeredAssets = array_merge_recursive(MVCF::$config['assets'], $this->config['assets']);
 		$this->_addAssets = array_merge($this->_addAssets, $this->config['addAssets']);
 		$this->_meta = array_merge($this->_meta, $this->config['meta']);
@@ -48,16 +29,20 @@ class Application {
 		if (isset ($viewConfig['return'])) {
 			$this->view->return = $viewConfig['return'];
 		}
-		$this->request = Request::getInstance ();
+		$this->_request = Request::getInstance ();
+		$this->_session = new Session();
 	}
 	/**
 	 * Функция запуска приложения
 	 */
 	public function run() {
+		$session = $this->session;
 
-		session_start();
+		if ($this->config['sessionAutoStart']) {
+			$session->start();
+		}
 
-		if (isset ($_SESSION['user'])) {
+		if (isset ($session->user)) {
 			$this->_user = User::loadFromSession();
 		}
 		else {
@@ -71,7 +56,7 @@ class Application {
 		$appNamespace = MVCF::$config ['appNamespace'];
 		$requestController = $appNamespace . '\\controllers\\' . ucfirst ( $this->request->controller !== '' ? $this->request->controller : $this->_defaultController );
 		if (class_exists ( $requestController )) {
-			$this->controller = new $requestController ();
+			$this->_controller = new $requestController ();
 		} else {
 			// TODO: вставить обработку 404 ошибки
 		}
@@ -110,7 +95,7 @@ class Application {
 					$this->_view = $value;
 				}
 				else {
-					throw \Exception ("Попытка установить недопустимое значение атрибута Application::".$attribute.". Требуется string, а не ".gettype($value));
+					throw new \Exception ("Попытка установить недопустимое значение атрибута Application::".$attribute.". Требуется string, а не ".gettype($value));
 				}
 				break;
 			case 'title':
@@ -118,11 +103,11 @@ class Application {
 					$this->addMeta(array("title" => $value));
 				}
 				else {
-					throw \Exception ("Попытка установить недопустимое значение атрибута Application::".$attribute.". Требуется string, а не ".gettype($value));
+					throw new \Exception ("Попытка установить недопустимое значение атрибута Application::".$attribute.". Требуется string, а не ".gettype($value));
 				}
 				break;
 			default:
-				throw \Exception ("Свойство $attribute не найдено");
+				throw new \Exception ("Свойство $attribute не найдено");
 		}
 	}
 	/**
@@ -146,10 +131,20 @@ class Application {
 			case 'baseDir':
 				return $this->_baseDir;
 			case 'title':
-				$title = isset ($this->title) ? $this->title : '';
+				$title = isset ($this->_meta['title']) ? $this->_meta['title'] : '';
 				return $title;
 			case 'user':
 				return $this->_user;
+			case 'config':
+				return $this->_config;
+			case 'request':
+				return $this->_request;
+			case 'session':
+				return $this->_session;
+			case 'controller':
+				return $this->_controller;
+			case 'action':
+				return $this->_action;
 			default:
 				throw new \Exception ("Свойство $attribute не найдено");
 		}
@@ -179,6 +174,14 @@ class Application {
 				return isset ($this->_meta['title']);
 			case 'user':
 				return isset ($this->_user);
+			case 'config':
+				return isset ($this->_config);
+			case 'request':
+				return isset ($this->_request);
+			case 'session':
+				return isset ($this->_session);
+			case 'controller':
+				return isset ($this->_controller);
 			default:
 				return false;
 		}
@@ -289,11 +292,46 @@ class Application {
 	 * @param unknown $url
 	 */
 	public function redirect($url) {
-
+		$request = MVCF::app()->request;
+		$user = MVCF::app()->user;
+		$return_url = 'http://' . $request->http_host . $request->request_uri;
+		$user->return_url = $return_url;
+		$user->storeInSession();
 		header("Location: $url");
 		exit();
 
 	}
+	/**
+	 * Настройки приложения
+	 *
+	 * @var array
+	 */
+	protected  $_config = null;
+	/**
+	 * Запрос клиента.
+	 * Содержит переданные параметры и прочую полезную информацию
+	 *
+	 * @var core\Request
+	 */
+	protected  $_request = null;
+	/**
+	 * Активная сессия
+	 *
+	 * @var \core\Session
+	 */
+	protected  $_session = null;
+	/**
+	 * Активный контроллер приложения
+	 *
+	 * @var \core\Controller
+	 */
+	protected  $_controller = null;
+	/**
+	 * Запрошенное действие
+	 *
+	 * @var string
+	 */
+	protected $_action = null;
 	/**
 	 * Корневой каталог приложения (Только чтение)
 	 *

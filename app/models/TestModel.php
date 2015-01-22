@@ -11,7 +11,7 @@ class TestModel extends \core\DataBaseModel {
 			"id" => array(),
 			"login" => array(
 					array(
-						"class" => '\core\validators\EmailValidator',
+						"validator" => '\core\validators\EmailValidator',
 						"params" => array("message" => "Логин должен быть электронным адресом")
 					)
 			),

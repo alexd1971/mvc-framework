@@ -38,7 +38,7 @@ class Index extends \core\Controller {
 		$app->title = "test";
 
  		$user = \app\models\TestModel::find(
-				array("=", "login", "user5")
+				array("like", "login", 'user5%')
 		);
  		$res = null;
 		if ($user->isValid()){
@@ -48,7 +48,7 @@ class Index extends \core\Controller {
 			$res = $user->validate();
 		}
 		$app->view->addData(array(
-				"content" => "Action test of Index controller.<br> Result: <pre>". print_r($res,true) . "</pre>"
+				"content" => "Action test of Index controller.<br> Result: <pre>". print_r($app->user,true) . "</pre>"
 		));
 	}
 }

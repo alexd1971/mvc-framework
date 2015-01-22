@@ -1,6 +1,8 @@
 <?php
 return array (
 
+		"sessionAutoStart" => true,
+
 		"dbConnections" => array (
 				'db' => array (
 						'driver' => 'pgsql',

@@ -38,7 +38,7 @@ class Auth extends \core\Controller {
 					$app->user->roles[] = "admin";
 				}
 				$app->user->storeInSession();
-				$app->redirect($app->createURL(''));
+				$app->redirect($app->user->return_url);
 			}
 			else {
 				$loginForm = new \app\views\LoginForm;
@@ -51,9 +51,9 @@ class Auth extends \core\Controller {
 	}
 
 	protected function _logout() {
-
-		session_destroy();
 		$app = MVCF::app();
+		$session = $app->session;
+		$session->destroy();
 		$app->redirect($app->createURL(''));
 
 	}

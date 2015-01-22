@@ -99,7 +99,7 @@ abstract class Model {
 			foreach ($class::$_attributes as $attribute => $rules) {
 				if ($rules) {
 					foreach ($rules as $rule) {
-						$validator = new $rule['class'];
+						$validator = new $rule['validator'];
 						$params = array_key_exists('params', $rule)? $rule['params']:array();
 						$params['value'] = $this->$attribute;
 						$validationResult = $validator->check($params);
@@ -217,7 +217,7 @@ abstract class Model {
 	 *
 	 * 		"attribute1" => array(
 	 * 			array(
-	 * 				"class" => '\validator\Class1',
+	 * 				"validator" => '\validator\Class1',
 	 * 				"params" => array(
 	 * 					"param1" => value1,
 	 * 					"param2 => value2,
@@ -226,7 +226,7 @@ abstract class Model {
 	 * 			),	// Первое правило валидации для атрибута
 	 *
 	 * 			array(
-	 * 				"class" => '\validator\Class2',
+	 * 				"validator" => '\validator\Class2',
 	 * 				"params" => array(
 	 * 					"param3" => value3,
 	 * 					"message" => "Информационное сообщение для пользователя",

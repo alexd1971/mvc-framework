@@ -28,6 +28,13 @@ class User {
 	 */
 	public $authenticated = false;
 	/**
+	 * Адрес возврата для перенаправления пользователя.
+	 * Здесь храниться URL, с которого был выполнен redirect
+	 *
+	 * @var string
+	 */
+	public $return_url = "";
+	/**
 	 * Функция сохраняет пользователя в переменной сессии
 	 * Применеие:
 	 *
@@ -42,15 +49,16 @@ class User {
 	 */
 	public function storeInSession () {
 
-		$_SESSION['user'] = serialize($this);
+		$session = MVCF::app()->session;
+		$session->user = serialize($this);
 	}
 	/**
 	 * Функция загружает данные пользователя из переменных сессии
 	 */
 	public static function loadFromSession () {
-
-		if (isset($_SESSION['user'])) {
-			return unserialize($_SESSION['user']);
+		$session = MVCF::app()->session;
+		if (isset($session->user)) {
+			return unserialize($session->user);
 		}
 		else {
 			return new get_class($this);
