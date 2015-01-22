@@ -30,7 +30,6 @@ abstract class DataBaseModel extends Model {
 	 */
 	public static function findByAttributes($criteria = array()) {
 		$class = get_called_class ();
-		$models = array();
 		$select = join ( ",\n", array_map(function($attr) {
 			$class = get_called_class();
 			return "{$class::$_alias}.$attr";
@@ -108,8 +107,10 @@ abstract class DataBaseModel extends Model {
 		$dbh = MVCF::app ()->getDBConnection ( $class::$_dbConnection );
 		$stmt = $dbh->prepare ( $sql );
 		$stmt->execute ();
+		$models = array();
 		if ($stmt->errorCode () == 0) {
 			while($record = $stmt->fetch ( \PDO::FETCH_ASSOC )) {
+				print_r($record);
 				$model = new $class ( $record );
 				$model->state = Model::UNCHANGED;
 				$models[] = $model;

@@ -3,7 +3,6 @@
 namespace app\controllers;
 
 use \core\MVCF;
-use \core\User;
 
 /**
  * Контроллер аутентификации
@@ -32,6 +31,12 @@ class Auth extends \core\Controller {
 		}
 		else {
 			if (isset($request->email) && isset($request->key)){
+
+				$userModel = \app\models\UserModel::findByAttributes(array(
+						"login" => $request->email
+				));
+				print_r($userModel);
+				exit();
 				$app->user->name = $request->email;
 				$app->user->authenticated = true;
 				if (preg_match('/^admin.*$/', $app->user->name) === 1) {
