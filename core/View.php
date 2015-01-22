@@ -13,7 +13,8 @@ class View {
 	 */
 	public function __construct() {
 
-		$this->_template = strtolower((new \ReflectionClass($this))->getShortName());
+		$rc = new \ReflectionClass($this);
+		$this->_template = strtolower($rc->getShortName());
 
 	}
 	/**
