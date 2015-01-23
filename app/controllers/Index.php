@@ -33,22 +33,4 @@ class Index extends \core\Controller {
 		));
 	}
 
-	protected function _test($args = array()) {
-		$app = MVCF::app();
-		$app->title = "test";
-
- 		$user = \app\models\TestModel::find(
-				array("like", "login", 'user5%')
-		);
- 		$res = null;
-		if ($user->isValid()){
-			$res=$user;
-		}
-		else {
-			$res = $user->validate();
-		}
-		$app->view->addData(array(
-				"content" => "Action test of Index controller.<br> Result: <pre>". print_r($app->user,true) . "</pre>"
-		));
-	}
 }

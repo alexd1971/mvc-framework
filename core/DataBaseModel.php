@@ -30,10 +30,15 @@ abstract class DataBaseModel extends Model {
 	 */
 	public static function findByAttributes($criteria = array()) {
 		$class = get_called_class ();
-		$select = join ( ",\n", array_map(function($attr) {
-			$class = get_called_class();
-			return "{$class::$_alias}.$attr";
-		}, array_keys($class::$_attributes) ));
+
+		$select = "";
+		foreach (array_keys($class::$_attributes) as $attribute){
+			if ($select !== "") {
+				$select .= ",\n";
+			}
+			$select .= "{$class::$_alias}.$attribute";
+		}
+
 		$where = "";
 		foreach ( $criteria as $key => $value ) {
 			if ($where !== "") {
@@ -87,10 +92,15 @@ abstract class DataBaseModel extends Model {
 	 */
 	public static function find($criteria) {
 		$class = get_called_class ();
-		$select = join ( ",\n", array_map(function($attr) {
-			$class = get_called_class();
-			return "{$class::$_alias}.$attr";
-		}, array_keys($class::$_attributes) ));
+
+		$select = "";
+		foreach (array_keys($class::$_attributes) as $attribute){
+			if ($select !== "") {
+				$select .= ",\n";
+			}
+			$select .= "{$class::$_alias}.$attribute";
+		}
+
 		$where = $class::_compileCriteria ($criteria);
 		$sql = "select $select\nfrom {$class::$_table} {$class::$_alias}\n" . ($where?"where $where":"");
 		return $class::findBySql($sql);
@@ -104,6 +114,8 @@ abstract class DataBaseModel extends Model {
 	 */
 	public static function findBySql($sql) {
 		$class = get_called_class ();
+/*		echo $sql;
+		exit;*/
 		$dbh = MVCF::app ()->getDBConnection ( $class::$_dbConnection );
 		$stmt = $dbh->prepare ( $sql );
 		$stmt->execute ();
