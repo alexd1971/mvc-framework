@@ -4,24 +4,11 @@ namespace core;
 
 class Request {
 	/**
-	 * Запрошенный контроллер
-	 *
-	 * @var string
-	 */
-	var $controller = '';
-	/**
-	 * Запрошеное действие
-	 *
-	 * @var string
-	 */
-	var $action = '';
-	/**
-	 * Аргументы для выполнения действия
+	 * Параметры запроса
 	 *
 	 * @var array
 	 */
-	var $arguments = array ();
-
+	var $params;
 	/**
 	 * Singletone
 	 *
@@ -49,9 +36,7 @@ class Request {
 		$params = explode ( '/', $matches ? $matches [1] : '' );
 
 		if ($params) {
-			$this->controller = isset ( $params [0] ) ? $params [0] : '';
-			$this->action = isset ( $params [1] ) ? $params [1] : '';
-			$this->arguments = array_slice ( $params, 2 );
+			$this->params = $params;
 		}
 		foreach ($_REQUEST as $key => $value) {
 			$this->$key = $value;

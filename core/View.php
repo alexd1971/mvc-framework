@@ -13,23 +13,24 @@ class View {
 	 */
 	public function __construct() {
 
+		$app = MVCF::app();
 		$rc = new \ReflectionClass($this);
-		$this->_template = strtolower($rc->getShortName());
+		$this->_template = (($app->module)?($app->module) . '/':'') . 'templates/' . strtolower($rc->getShortName()) . '.php';
 
 	}
 	/**
 	 * Функция формирует готовое представление.
 	 *
 	 * @param array $data
-	 * @param boolean $return
+	 * @param boolean $return // Если true, то возвращает результат в виде строки.
 	 * @return string
 	 */
-	public function render() {
+	public function render($return = true) {
 		$app = MVCF::app();
-		$template = $_SERVER['DOCUMENT_ROOT'] . '/' . $app->baseDir . '/' . $app->config['templates'] . '/' . $this->_template . '.php';
+		$template = $_SERVER['DOCUMENT_ROOT'] . '/' . $app->baseDir . '/' . $this->_template;;
 		extract($this->_data, EXTR_OVERWRITE);
 
-		if ($this->return) {
+		if ($return) {
 			ob_start();
 			ob_implicit_flush(false);
 			include $template;
@@ -65,13 +66,8 @@ class View {
 					$this->_template = $value;
 				}
 				break;
-			case 'return':
-				if (gettype($value) == 'boolean') {
-					$this->_return = $value;
-				}
-				break;
 			default:
-				throw \Exception("Атрибут $attribute не найден");
+				throw new \Exception("Атрибут $attribute не найден");
 		}
 	}
 	/**
@@ -85,11 +81,8 @@ class View {
 			case 'template':
 				return $this->_template;
 				break;
-			case 'return':
-				return $this->_return;
-				break;
 			default:
-				throw \Exception("Атрибут $attribute не найден");
+				throw new \Exception("Атрибут $attribute не найден");
 		}
 	}
 	/**
@@ -102,9 +95,6 @@ class View {
 		switch ($attribute) {
 			case 'template':
 				return isset($this->_template);
-				break;
-			case 'return':
-				return isset ($this->_return);
 				break;
 			default:
 				return false;
@@ -125,13 +115,4 @@ class View {
 	 * @var array
 	 */
 	protected $_data = array();
-	/**
-	 * Если $return == true, то функция возвращает сформированное представление в виде строки.
-	 * Иначе - выводит представление на стандартное утройство вывода.
-	 * По умолчанию true
-	 *
-	 * @var boolean
-	 */
-	protected $_return = true;
-
 }

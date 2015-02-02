@@ -28,7 +28,7 @@ abstract class DataBaseModel extends Model {
 	 * @param array $criteria
 	 * @return DataBaseModel
 	 */
-	public static function findByAttributes($criteria = array()) {
+	public static function findByAttributes($criteria = array(), $sort = array(), $limit = null) {
 		$class = get_called_class ();
 
 		$select = "";
@@ -46,8 +46,43 @@ abstract class DataBaseModel extends Model {
 			}
 			$where .= "{$class::$_alias}.$key=" . (is_string ( $value ) ? "'$value'" : $value);
 		}
-		$sql = "select $select\nfrom {$class::$_table} {$class::$_alias}\n" . ($where?"where $where":"");
+		$order = "";
+		if ($sort) {
+					foreach ($sort as $attribute => $direction){
+				if ($order) {
+					$order .= ', ';
+				}
+				$order .= "{$class::$_alias}.$attribute $direction";
+			}
+		}
+		$sql = "select $select\nfrom {$class::$_table} {$class::$_alias}\n" . ($where?"where $where":"") . ($order?"order by $order":"") . ($limit===null?"":"limit $limit");
 		return $class::findBySql($sql);
+	}
+	/**
+	 * Функция удаляет записи из БД
+	 * Описание параметров см. findByAttributes
+	 *
+	 * @param array $criteria
+	 */
+	public static function deleteByAttributes($criteria){
+		$class = get_called_class ();
+		$where = "";
+		foreach ( $criteria as $key => $value ) {
+			if ($where !== "") {
+				$where .= "\nand ";
+			}
+			$where .= "{$class::$_alias}.$key=" . (is_string ( $value ) ? "'$value'" : $value);
+		}
+		$sql = "delete from {$class::$_table} {$class::$_alias}\n" . ($where?"where $where":"");
+		$dbh = MVCF::app ()->getDBConnection ( $class::$_dbConnection );
+		$stmt = $dbh->prepare ( $sql );
+		$stmt->execute ();
+		if ($stmt->errorCode () != 0) {
+			$errors = $stmt->errorInfo ();
+			echo ($errors [2]);
+			return false;
+		}
+		return true;
 	}
 	/**
 	 * public static function find($criteria)
@@ -87,10 +122,17 @@ abstract class DataBaseModel extends Model {
 	 * ),
 	 * ));
 	 *
+	 * Параметр $sort имеет вид:
+	 *
+	 * array(
+	 * 		"attr1" => 'ASC',
+	 * 		"attr2" => 'DESC'
+	 * )
+	 *
 	 * @param array $criteria
 	 * @return array
 	 */
-	public static function find($criteria) {
+	public static function find($criteria = array(), $sort = array(), $limit = null) {
 		$class = get_called_class ();
 
 		$select = "";
@@ -100,9 +142,20 @@ abstract class DataBaseModel extends Model {
 			}
 			$select .= "{$class::$_alias}.$attribute";
 		}
-
-		$where = $class::_compileCriteria ($criteria);
-		$sql = "select $select\nfrom {$class::$_table} {$class::$_alias}\n" . ($where?"where $where":"");
+		$where = "";
+		if($criteria){
+			$where = $class::_compileCriteria ($criteria);
+		}
+		$order = "";
+		if ($sort) {
+			foreach ($sort as $attribute => $direction){
+				if ($order) {
+					$order .= ', ';
+				}
+				$order .= "{$class::$_alias}.$attribute $direction";
+			}
+		}
+		$sql = "select $select\nfrom {$class::$_table} {$class::$_alias}\n" . ($where?"where $where\n":"") . ($order?"order by $order\n":"") . ($limit===null?"":"limit $limit");
 		return $class::findBySql($sql);
 	}
 	/**
@@ -114,15 +167,12 @@ abstract class DataBaseModel extends Model {
 	 */
 	public static function findBySql($sql) {
 		$class = get_called_class ();
-/*		echo $sql;
-		exit;*/
 		$dbh = MVCF::app ()->getDBConnection ( $class::$_dbConnection );
 		$stmt = $dbh->prepare ( $sql );
 		$stmt->execute ();
 		$models = array();
 		if ($stmt->errorCode () == 0) {
 			while($record = $stmt->fetch ( \PDO::FETCH_ASSOC )) {
-				print_r($record);
 				$model = new $class ( $record );
 				$model->state = Model::UNCHANGED;
 				$models[] = $model;
@@ -131,17 +181,34 @@ abstract class DataBaseModel extends Model {
 			$errors = $stmt->errorInfo ();
 			echo ($errors [2]);
 		}
-		if($models){
-			if (count($models) > 1){
-				return $models;
-			}
-			else {
-				return $models[0];
-			}
+		return $models;
+	}
+	/**
+	 * Функция определяет количество записей, соответствующих критериям
+	 * Возвращает количество записей или false в случае ошибки
+	 *
+	 * @param array $criteria
+	 * @return integer
+	 */
+	public static function count($criteria = array()) {
+		$class = get_called_class ();
+		$where = "";
+		if($criteria){
+			$where = $class::_compileCriteria ($criteria);
 		}
-		else {
-			return null;
+		$sql = "select count(*) as count from {$class::$_table} {$class::$_alias}" . ($where?" where $where": "");
+		$dbh = MVCF::app ()->getDBConnection ( $class::$_dbConnection );
+		$stmt = $dbh->prepare ( $sql );
+		$stmt->execute ();
+		if ($stmt->errorCode () == 0) {
+			$result = $stmt->fetch ( \PDO::FETCH_ASSOC );
+			return $result['count'];
+		} else {
+			$errors = $stmt->errorInfo ();
+			echo ($errors [2]);
+			return false;
 		}
+
 	}
 	/**
 	 * public static function sync(&$models)
@@ -188,15 +255,17 @@ abstract class DataBaseModel extends Model {
 					}
 					$sth->execute ( $values );
 					if ($sth->errorCode () == 0) {
-						if ($class::$_pkSequence) {
-							$model->{$class::$_primaryKey} = $dbh->lastInsertId ( $class::$_pkSequence );
-						} else {
-							$model->{$class::$_primaryKey} = $dbh->lastInsertId ();
+						if($class::$_primaryKey) {
+							if ($class::$_pkSequence) {
+								$model->{$class::$_primaryKey} = $dbh->lastInsertId ( $class::$_pkSequence );
+							} else {
+								$model->{$class::$_primaryKey} = $dbh->lastInsertId ();
+							}
 						}
 						$model->state = Model::UNCHANGED;
 					}
 					else {
-						$errors = $stmt->errorInfo ();
+						$errors = $sth->errorInfo ();
 						echo ($errors [2]);
 					}
 				}
@@ -408,9 +477,9 @@ abstract class DataBaseModel extends Model {
 				if (gettype ( $value ) === 'string') {
 					$value = "'" . $value . "'";
 				}
-				return "{$class::$_alias}." . $criteria [1] . " " . $criteria [0] . " " . $value;
+				return $criteria [1] . " " . $criteria [0] . " " . $value;
 			case 'is' :
-				return "{$class::$_alias}." . $criteria [1] . " " . $criteria [0] . " " . $criteria [2];
+				return $criteria [1] . " " . $criteria [0] . " " . $criteria [2];
 			case 'between' :
 				$arguments = array_map ( function ($value) {
 					if (gettype ( $value ) === 'string') {
@@ -418,7 +487,7 @@ abstract class DataBaseModel extends Model {
 					}
 					return $value;
 				}, $criteria [2] );
-				return "{$class::$_alias}." . $criteria [1] . " " . $criteria [0] . " " . join ( " and ", $arguments );
+				return $criteria [1] . " " . $criteria [0] . " " . join ( " and ", $arguments );
 			case 'in' :
 			case 'not in' :
 				$arguments = array_map ( function ($value) {
@@ -427,7 +496,7 @@ abstract class DataBaseModel extends Model {
 					}
 					return $value;
 				}, $criteria [2] );
-				return "{$class::$_alias}." . $criteria [1] . " " . $criteria [0] . " (" . join ( ',', $arguments ) . ")";
+				return $criteria [1] . " " . $criteria [0] . " (" . join ( ',', $arguments ) . ")";
 			default :
 				throw \Exception ( "Ошибка в формате критериев. Недопустимый оператор: $operator" );
 		}

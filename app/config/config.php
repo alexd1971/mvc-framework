@@ -1,18 +1,37 @@
 <?php
 return array (
-
+		/**
+		 * Если true, то приложение автоматически выполняет запуск сессии
+		 */
 		"sessionAutoStart" => true,
-
+		/**
+		 * Конфигурация подключений к БД
+		 */
 		"dbConnections" => array (
 				'db' => array (
 						'driver' => 'pgsql',
 						'host' => 'localhost',
 						'port' => '5432',
-						'dbname' => 'pjrkt',
-						'user' => 'uideveloper',
-						'password' => 'Qq1234567!!'
+						'dbname' => 'orkk_db',
+						'user' => 'orkk_user',
+						'password' => 'orkk_p@ssw0rd'
 				)
 		),
+		/**
+		 * Конфигурация модулей приложения
+		 *
+		 * 	"modules" => array (
+		 *		"admin" => array (
+		 *				"defaultController" => 'Dashboard'
+		 *		)
+		 *	),
+		 *
+		 */
+		"modules" => array (),
+		/**
+		 * Контроллер по умолчанию
+		 */
+		"defaultController" => "Index",
 
 		/**
 		 * Конфигурация метаданных, которые могут включаться приложением.
@@ -23,75 +42,72 @@ return array (
 		 *
 		 * array(
 		 *
-		 * 		"jquery" => array (
-		 * 			"type" => "javascript",
-		 * 			"url" => "core/assets/js/jquery.min.js"
-		 * 		),
+		 * "jquery" => array (
+		 * "type" => "javascript",
+		 * "url" => "core/assets/js/jquery.min.js"
+		 * ),
 		 *
-		 * 		"bootstrap-js" => array (
-		 * 			"type" => "javascript",
-		 * 			"url" => "core/assets/js/bootstrap.min.js",
-		 * 			"depends" => array ("jquery", "bootstrap-css"),
-		 * 		),
+		 * "bootstrap-js" => array (
+		 * "type" => "javascript",
+		 * "url" => "core/assets/js/bootstrap.min.js",
+		 * "depends" => array ("jquery", "bootstrap-css"),
+		 * ),
 		 *
-		 * 		"bootstrap-css" => array (
-		 * 			"type" => "css",
-		 * 			"url" => "core/assets/css/bootstrap.min.css"
-		 * 		),
+		 * "bootstrap-css" => array (
+		 * "type" => "css",
+		 * "url" => "core/assets/css/bootstrap.min.css"
+		 * ),
 		 *
-		 * 		"some_script" => array (
-		 * 			"type" => "javascript",
-		 * 			"text" => <<<SCRIPT
+		 * "some_script" => array (
+		 * "type" => "javascript",
+		 * "text" => <<<SCRIPT
 		 *
 		 * Text of script
 		 *
 		 * SCRIPT,
-		 * 		),
+		 * ),
 		 *
-		 * 		"some_css" => array (
-		 * 			"type" => "css",
-		 * 			"text" => <<<CSS
+		 * "some_css" => array (
+		 * "type" => "css",
+		 * "text" => <<<CSS
 		 *
 		 * Text of css
 		 *
 		 * CSS,
-		 * 		)
+		 * )
 		 * )
 		 */
 
 		"assets" => array (
 
-			"jquery" => array (
-				"type" => "javascript",
-				"url" => "app/assets/js/jquery.min.js"
-			),
+				"jquery" => array (
+						"type" => "javascript",
+						"url" => "app/assets/js/jquery.min.js"
+				),
 
-			"bootstrap_js" => array (
-				"type" => "javascript",
-				"url" => "app/assets/js/bootstrap.min.js",
-				"depends" => array ("jquery", "bootstrap_css")
-			),
+				"bootstrap_js" => array (
+						"type" => "javascript",
+						"url" => "app/assets/js/bootstrap.min.js",
+						"depends" => array (
+								"jquery",
+								"bootstrap_css"
+						)
+				),
 
-			"bootstrap_css" => array (
-				"type" => "css",
-				"url" => "app/assets/css/bootstrap.min.css"
-			),
+				"bootstrap_css" => array (
+						"type" => "css",
+						"url" => "app/assets/css/bootstrap.min.css"
+				),
 
-			"font-awesome" => array (
-					"type" => "css",
-					"url" => "app/assets/css/font-awesome.min.css"
-			),
+				"font-awesome" => array (
+						"type" => "css",
+						"url" => "app/assets/css/font-awesome.min.css"
+				),
 
-			"style" => array (
-					"type" => "css",
-					"url" => "app/assets/css/style.css"
-			),
-			"jquery.tagcanvas" => array (
-					"type" => "javascript",
-					"url" => "app/assets/js/jquery.tagcanvas.min.js",
-					"depends" => array("jquery")
-			),
-
+				"style" => array (
+						"type" => "css",
+						"url" => "app/assets/css/style.css"
+				),
 		),
 
 		/**
@@ -99,9 +115,8 @@ return array (
 		 */
 
 		"addAssets" => array (
-			"style",
-			"bootstrap_js",
-			"font-awesome",
+				"bootstrap_js",
+				"font-awesome"
 		),
 
 		/**
@@ -110,40 +125,31 @@ return array (
 
 		"meta" => array (
 
-			"meta" => array (
-				"charset" => "utf-8",
-				array (
-					"name" => "keywords",
-					"content" => ""
-				),
-				array (
-					"name" => "description",
-					"content" => ""
-				),
-				array (
-					"name" => "viewport",
-					"content" => "width=1024"
-				),
-			),
-
+				"meta" => array (
+						"charset" => "utf-8",
+						array (
+								"name" => "keywords",
+								"content" => ""
+						),
+						array (
+								"name" => "description",
+								"content" => ""
+						),
+						array (
+								"name" => "viewport",
+								"content" => "width=1024"
+						)
+				)
 		),
-
-		/**
-		 * Путь к каталогу шаблонов
-		 * Путь указывается относительно корневого каталога приложения
-		 */
-		"templates"		=> 'templates',
 
 		/**
 		 * Конфигурация представления, используемое приложением
 		 */
 
-		"view" => array(
-			// По умолчанию используется класс \core\View
-			//"class" 	=> '\core\View',
-			"template"	=> "base",
-			"return"	=> false
-		),
+		"view" => array (
 
-
+				// По умолчанию используется класс \core\View
+				// "class" => '\core\View',
+				"template" => "templates/base.php"
+		)
 );

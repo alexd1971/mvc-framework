@@ -24,8 +24,5 @@ class Loader {
 		if (file_exists ( $file )) {
 			include $file;
 		}
-		else {
-			include $class . '.php';
-		}
 	}
 }

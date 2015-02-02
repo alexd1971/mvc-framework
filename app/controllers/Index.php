@@ -7,17 +7,9 @@ use core\MVCF;
 class Index extends \core\Controller {
 
 	public function __construct(){
+
 		$this->accessRules = array(
-				array(
-						"users" => array("guest"),
-						"access" => "deny",
-						"redirect" =>"auth/login"
-				),
-				array(
-						"actions" => array("test"),
-						"custom" => "\app\AccessChecker",
-						"access" => "allow",
-				),
+
 				array(
 						"access" => "allow"
 				)
@@ -26,10 +18,13 @@ class Index extends \core\Controller {
 
 	protected function _index($args = array()) {
 		$app = MVCF::app();
-		$matrixView = new \app\views\Matrix;
-		$app->title = "Матрица";
+		$indexView = new \app\views\Index;
+		$indexView->addData(array(
+				"message" => "Это сообщение передано в шаблон из контроллера!"
+		));
+		$app->title = "MVCF";
 		$app->view->addData(array(
-			"content" => $matrixView->render()
+			"content" => $indexView->render()
 		));
 	}
 

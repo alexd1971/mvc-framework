@@ -55,6 +55,8 @@ abstract class Model {
 	 * "attrn" => null // если не нужно инициализировать атрибут, то его значение устанавливается в null
 	 * )
 	 *
+	 * Если конструктору переданы атрибуты, то модель переходит в статус Model::INSERT
+	 *
 	 * @param array $attributes
 	 */
 	public function __construct($attributes = array()) {
@@ -107,6 +109,7 @@ abstract class Model {
 						if (!$validationResult["valid"] && $this->_isValid != self::INVALID) {
 							$this->_isValid = self::INVALID;
 						}
+						if(!$validationResult["valid"]) break;
 					}
 				}
 			}
@@ -128,6 +131,14 @@ abstract class Model {
 			$this->validate();
 		}
 		return $this->_isValid == self::VALID?true:false;
+	}
+	/**
+	 * Возвращает результаты валидации модели
+	 *
+	 * @return multitype:
+	 */
+	public function getValidationResults (){
+		return $this->_validationResults;
 	}
 	/**
 	 * "Волшебная" функция возвращает значение атрибута, если он определен.
@@ -201,6 +212,23 @@ abstract class Model {
 				} else {
 					return false;
 				}
+		}
+	}
+	/**
+	 * Функция устанавливает значения атрибутов модели на основании данных ассоциативного массива $attributes
+	 * Массив значений имеет вид аналогичный описанному в комментариях к конструктору
+	 *
+	 * @param array $values
+	 */
+	public function setAttributes( $attributes ) {
+		$class = get_class ( $this );
+		if ($attributes) {
+			foreach ( array_keys($class::$_attributes) as $attribute ) {
+				if (array_key_exists ( $attribute, $attributes ) && $this->_attrValues [$attribute] != $attributes [$attribute]) {
+					$this->_attrValues [$attribute] = $attributes [$attribute];
+					$this->state = self::UPDATE;
+				}
+			}
 		}
 	}
 	/**

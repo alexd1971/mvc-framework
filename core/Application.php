@@ -15,21 +15,37 @@ class Application {
 	 * Конструктор
 	 */
 	public function __construct() {
+
 		$this->_baseDir = (MVCF::$indexDir?MVCF::$indexDir . '/':'') . MVCF::$config ['appNamespace'];
+
 		$this->_config = include $_SERVER['DOCUMENT_ROOT'] . '/' . $this->_baseDir . '/config/config.php';
-		$this->_registeredAssets = array_merge_recursive(MVCF::$config['assets'], $this->config['assets']);
+
+		$this->_registeredAssets = $this->config['assets'];
+
 		$this->_addAssets = array_merge($this->_addAssets, $this->config['addAssets']);
+
 		$this->_meta = array_merge($this->_meta, $this->config['meta']);
-		$viewConfig = $this->config['view'];
-		$viewClass = isset($viewConfig['class'])?$viewConfig['class']:'\core\View';
-		$this->_view = new $viewClass;
-		if (isset ($viewConfig['template'])) {
-			$this->_view->template = $viewConfig['template'];
-		}
-		if (isset ($viewConfig['return'])) {
-			$this->view->return = $viewConfig['return'];
-		}
+
+		$this->_defaultController = $this->config['defaultController'];
+
 		$this->_request = Request::getInstance ();
+		if(isset($this->request->params)){
+			if (isset($this->request->params[0])) {
+				if(in_array($this->request->params[0], array_keys($this->config['modules']))){
+					$this->_module = $this->request->params[0];
+					$defaultController = isset($this->config['modules'][$this->_module]['defaultController'])?$this->config['modules'][$this->_module]['defaultController']:'Index';
+					$this->_controller = (isset($this->request->params[1]) && $this->request->params[1])?$this->request->params[1]:$defaultController;
+					$this->_action = isset($this->request->params[2])?$this->request->params[2]:'';
+					$this->_actionParams = array_slice ( $this->request->params, 3 );
+				}
+				else {
+					$this->_controller = $this->request->params[0]?$this->request->params[0]:$this->_defaultController;
+					$this->_action = isset($this->request->params[1])?$this->request->params[1]:'';
+					$this->_actionParams = array_slice ( $this->request->params, 2 );
+				}
+			}
+		}
+
 		$this->_session = new Session();
 	}
 	/**
@@ -49,27 +65,30 @@ class Application {
 			$this->_user = new User;
 			$this->_user->storeInSession();
 		}
+
+		$viewConfig = $this->config['view'];
+		$viewClass = isset($viewConfig['class'])?$viewConfig['class']:'\core\View';
+		$this->_view = new $viewClass;
+		if (isset ($viewConfig['template'])) {
+			$this->_view->template = $viewConfig['template'];
+		}
+
 		/**
 		 * Если в запросе указан контроллер, то используем его.
 		 * Иначе - контроллер по умолчанию
 		 */
 		$appNamespace = MVCF::$config ['appNamespace'];
-		$requestController = $appNamespace . '\\controllers\\' . ucfirst ( $this->request->controller !== '' ? $this->request->controller : $this->_defaultController );
-		if (class_exists ( $requestController )) {
-			$this->_controller = new $requestController ();
+		$controllerClass = $appNamespace . ($this->_module?'\\' . $this->_module:'') . '\\controllers\\' . ucfirst ( $this->_controller );
+		if (class_exists ( $controllerClass )) {
+			$controller = new $controllerClass ();
+			$this->_action = strtolower($this->_action?$this->_action:$controller->defaultAction);
+			$controller->{$this->_action}($this->_actionParams);
+			$customMetaTags = $this->generateCustomMetaTags();
+			$this->view->addData(array("customMetaTags" => $customMetaTags));
+			$this->view->render(false);
 		} else {
-			// TODO: вставить обработку 404 ошибки
+			$this->redirect('/errors/error_404');
 		}
-		/**
-		 * Если действие определено в запросе, то пытаемся выполнить его.
-		 * Иначе - действие по умолчанию контроллера
-		 */
-		$requestAction = strtolower ( $this->request->action !== '' ? $this->request->action : $this->controller->defaultAction );
-		$this->controller->$requestAction ( $this->request->arguments );
-		$customMetaTags = $this->generateCustomMetaTags();
-		$this->view->addData(array("customMetaTags" => $customMetaTags));
-		$this->view->return = false;
-		$this->view->render();
 	}
 	/**
 	 * Функция устанавливает значения атрибутов класса.
@@ -100,7 +119,7 @@ class Application {
 				break;
 			case 'title':
 				if (gettype($value) === 'string') {
-					$this->addMeta(array("title" => $value));
+					$this->_meta["title"] = $value;
 				}
 				else {
 					throw new \Exception ("Попытка установить недопустимое значение атрибута Application::".$attribute.". Требуется string, а не ".gettype($value));
@@ -141,6 +160,8 @@ class Application {
 				return $this->_request;
 			case 'session':
 				return $this->_session;
+			case 'module':
+				return $this->_module;
 			case 'controller':
 				return $this->_controller;
 			case 'action':
@@ -180,8 +201,12 @@ class Application {
 				return isset ($this->_request);
 			case 'session':
 				return isset ($this->_session);
+			case 'module':
+				return isset ($this->_module);
 			case 'controller':
 				return isset ($this->_controller);
+			case 'action':
+				return isset ($this->_action);
 			default:
 				return false;
 		}
@@ -321,17 +346,29 @@ class Application {
 	 */
 	protected  $_session = null;
 	/**
+	 * Запрошенный модуль
+	 *
+	 * @var string
+	 */
+	protected $_module = "";
+	/**
 	 * Активный контроллер приложения
 	 *
-	 * @var \core\Controller
+	 * @var string
 	 */
-	protected  $_controller = null;
+	protected  $_controller = "";
 	/**
 	 * Запрошенное действие
 	 *
 	 * @var string
 	 */
-	protected $_action = null;
+	protected $_action = "";
+	/**
+	 * Дополнительные параметры для выполнения действия
+	 *
+	 * @var array
+	 */
+	protected $_actionParams = array();
 	/**
 	 * Корневой каталог приложения (Только чтение)
 	 *
@@ -432,14 +469,7 @@ class Application {
 			}
 		}
 		$addAssets = array();
-		foreach ($this->_addAssets as $asset) {
-			$assetConfig = $this->_registeredAssets[$asset];
-			if (isset ($assetConfig['depends'])){
-				$addAssets = array_merge($addAssets, $assetConfig['depends']);
-			}
-			$addAssets[] = $asset;
-		}
-		$addAssets = array_unique($addAssets);
+		$addAssets = $this->getAssetsWithDependences($this->_addAssets);
 		foreach ($addAssets as $asset) {
  			$assetConfig = $this->_registeredAssets[$asset];
 			if ($assetConfig['type'] == 'javascript') {
@@ -462,5 +492,17 @@ class Application {
  			$metaTags .= $metaTag;
  		}
 		return $metaTags;
+	}
+
+	protected function getAssetsWithDependences($assets){
+		$dependencies = array();
+		foreach($assets as $asset){
+			$assetConfig = $this->_registeredAssets[$asset];
+			if (isset($assetConfig['depends']) && $assetConfig['depends']){
+				$dependencies = array_merge($dependencies, $this->getAssetsWithDependences($assetConfig['depends']));
+			}
+		}
+		$dependencies = array_merge($dependencies, $assets);
+		return array_unique($dependencies);
 	}
 }

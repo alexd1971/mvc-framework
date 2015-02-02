@@ -19,40 +19,4 @@ return array (
 		 */
 		"applicationClass" => "\core\Application",
 
-		/**
-		 * Дополнительные пути для поиска классов
-		 */
-
-		"include_path" => array (),
-
-		/**
-		 * Стандартная конфигурация метаданных фреймворка.
-		 *
-		 * Для загрузки сконфигурированного дополнения необходимо вызвать функцию: MVCF::app()->loadAssets(array("assetName",...));
-		 *
-		 * Общий вид конфигурации:
-		 *
-		 * array(
-		 *
-		 * 		"jquery" => array (
-		 * 			"type" => "javascript",
-		 * 			"url" => "core/assets/js/jquery.min.js"
-		 * 		),
-		 *
-		 * 		"bootstrap-js" => array (
-		 * 			"type" => "javascript",
-		 * 			"url" => "core/assets/js/bootstrap.min.js",
-		 * 			"depends" => array ("jquery", "bootstrap-css"),
-		 * 		),
-		 *
-		 * 		"bootstrap-css" => array (
-		 * 			"type" => "css",
-		 * 			"url" => "core/assets/css/bootstrap.min.css"
-		 * 		),
-		 *
-		 * )
-		 */
-
-		"assets" => array (
-		),
 );
