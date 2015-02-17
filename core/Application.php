@@ -20,7 +20,7 @@ class Application {
 
 		$this->_config = include $_SERVER['DOCUMENT_ROOT'] . '/' . $this->_baseDir . '/config/config.php';
 
-		$this->_registeredAssets = $this->config['assets'];
+		$this->_registeredAssets = array_merge_recursive(MVCF::$config['assets'], $this->config['assets']);
 
 		$this->_addAssets = array_merge($this->_addAssets, $this->config['addAssets']);
 

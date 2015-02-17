@@ -27,7 +27,7 @@ class View {
 	 */
 	public function render($return = true) {
 		$app = MVCF::app();
-		$template = $_SERVER['DOCUMENT_ROOT'] . '/' . $app->baseDir . '/' . $this->_template;;
+		$template = $_SERVER['DOCUMENT_ROOT'] . '/' . $app->baseDir . '/' . $this->_template;
 		extract($this->_data, EXTR_OVERWRITE);
 
 		if ($return) {

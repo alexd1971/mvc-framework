@@ -110,16 +110,16 @@ abstract class DataBaseModel extends Model {
 	 * Для объединения критериев в примере выше логической связкой "and" получаем:
 	 *
 	 * array('and', array(
-	 * array('=', "attribute1", $value1),
-	 * array('like', "attribute2", "%$val%"),
-	 * array('between', "attribute3", array($val1, $val2)),
-	 * array('in', "attribute4", array($val1, $val2, $val3, ...)),
-	 * array('is', "attribute5", 'not null'),
-	 * array('or', array(
-	 * array('=', "attribute6", $value6),
-	 * array(...),
+	 * 		array('=', "attribute1", $value1),
+	 * 		array('like', "attribute2", "%$val%"),
+	 * 		array('between', "attribute3", array($val1, $val2)),
+	 * 		array('in', "attribute4", array($val1, $val2, $val3, ...)),
+	 * 		array('is', "attribute5", 'not null'),
+	 * 		array('or', array(
+	 * 			array('=', "attribute6", $value6),
+	 * 			array(...),
 	 * ...
-	 * ),
+	 * 		),
 	 * ));
 	 *
 	 * Параметр $sort имеет вид:
@@ -498,7 +498,7 @@ abstract class DataBaseModel extends Model {
 				}, $criteria [2] );
 				return $criteria [1] . " " . $criteria [0] . " (" . join ( ',', $arguments ) . ")";
 			default :
-				throw \Exception ( "Ошибка в формате критериев. Недопустимый оператор: $operator" );
+				throw new \Exception ( "Ошибка в формате критериев. Недопустимый оператор: $operator" );
 		}
 	}
 }

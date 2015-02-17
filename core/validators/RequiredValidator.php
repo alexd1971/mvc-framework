@@ -6,7 +6,7 @@ class RequiredValidator implements IValidator {
 	public function check($params) {
 		$value = $params ['value'];
 		$result = array ();
-		if ($value || $value == 0) {
+		if ($value !== '') {
 			$result['valid'] = true;
 		}
 		else {

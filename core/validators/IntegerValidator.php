@@ -10,7 +10,7 @@ class IntegerValidator implements IValidator {
 	public function check($params) {
 		$value = $params ['value'];
 		$attribute = isset($params['attribute'])?$params['attribute']:"";
-		if($value || $value == 0){
+		if($value || $value === 0){
 			$result = array ();
 			if (is_numeric ( $value ) && gettype ( $value + 0 ) == "integer") {
 				$result ["valid"] = true;

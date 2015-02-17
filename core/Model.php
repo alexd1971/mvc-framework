@@ -103,7 +103,9 @@ abstract class Model {
 					foreach ($rules as $rule) {
 						$validator = new $rule['validator'];
 						$params = array_key_exists('params', $rule)? $rule['params']:array();
+						$params['attribute'] = $attribute;
 						$params['value'] = $this->$attribute;
+						$params['model'] = $this;
 						$validationResult = $validator->check($params);
 						$this->_validationResults[$attribute] = $validationResult;
 						if (!$validationResult["valid"] && $this->_isValid != self::INVALID) {
@@ -127,7 +129,7 @@ abstract class Model {
 	 * @return boolean
 	 */
 	public function isValid() {
-		if ($this->_isValid === self::NOT_VALIDATED){
+		if ($this->_isValid == self::NOT_VALIDATED){
 			$this->validate();
 		}
 		return $this->_isValid == self::VALID?true:false;
