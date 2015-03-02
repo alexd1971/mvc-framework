@@ -173,7 +173,10 @@ abstract class DataBaseModel extends Model {
 		$models = array();
 		if ($stmt->errorCode () == 0) {
 			while($record = $stmt->fetch ( \PDO::FETCH_ASSOC )) {
-				$model = new $class ( $record );
+				$model = new $class ();
+				foreach($record as $attribute => $value) {
+					$model->setRawAttribute($attribute, $value);
+				}
 				$model->state = Model::UNCHANGED;
 				$models[] = $model;
 			}
@@ -244,30 +247,31 @@ abstract class DataBaseModel extends Model {
 				unset ( $attributes [$pk] );
 			}
 			if ($insert) {
-				$sql = "insert into {$class::$_table} (" . join ( ',', $attributes ) . ") values (" . join ( ',', array_map ( function ($attribute) {
-					return '?';
-				}, $attributes ) ) . ")";
-				$sth = $dbh->prepare ( $sql );
+				$sql = "insert into {$class::$_table} (" . join ( ',', $attributes ) . ") values";
+				$sql_values = " (" . join ( ',', array_map ( function ($attribute) { return '?'; }, $attributes ) ) . "),";
+				$values = array ();
 				foreach ( $insert as $model ) {
-					$values = array ();
+					$sql .= $sql_values;
 					foreach ( $attributes as $attribute ) {
-						$values [] = $model->$attribute;
+						$values [] = $model->getRawAttribute($attribute);
 					}
-					$sth->execute ( $values );
-					if ($sth->errorCode () == 0) {
-						if($class::$_primaryKey) {
-							if ($class::$_pkSequence) {
-								$model->{$class::$_primaryKey} = $dbh->lastInsertId ( $class::$_pkSequence );
-							} else {
-								$model->{$class::$_primaryKey} = $dbh->lastInsertId ();
-							}
+				}
+				$sql = trim($sql, ',');
+				$sth = $dbh->prepare ( $sql );
+				$sth->execute ( $values );
+				if ($sth->errorCode () == 0) {
+					if($class::$_primaryKey) {
+						if ($class::$_pkSequence) {
+							$model->{$class::$_primaryKey} = $dbh->lastInsertId ( $class::$_pkSequence );
+						} else {
+							$model->{$class::$_primaryKey} = $dbh->lastInsertId ();
 						}
-						$model->state = Model::UNCHANGED;
 					}
-					else {
-						$errors = $sth->errorInfo ();
-						echo ($errors [2]);
-					}
+					$model->state = Model::UNCHANGED;
+				}
+				else {
+					$errors = $sth->errorInfo ();
+					throw new \Exception("Ошибка записи в БД: $errors [2]");
 				}
 			}
 			if ($delete) {
@@ -288,7 +292,7 @@ abstract class DataBaseModel extends Model {
 				}
 				else {
 					$errors = $sth->errorInfo ();
-					echo ($errors [2]);
+					throw new \Exception("Ошибка удаления записи БД: $errors [2]");
 				}
 
 			}
@@ -300,7 +304,7 @@ abstract class DataBaseModel extends Model {
 				foreach ( $update as $model ) {
 					$values = array ();
 					foreach ( $attributes as $attribute ) {
-						$values [] = $model->$attribute;
+						$values [] = $model->getRawAttribute($attribute);
 					}
 					$values [] = $model->{$class::$_primaryKey};
 					$sth->execute ( $values );
@@ -309,7 +313,7 @@ abstract class DataBaseModel extends Model {
 					}
 					else {
 						$errors = $sth->errorInfo ();
-						echo ($errors [2]);
+						throw new \Exception("Ошибка записи в БД: $errors [2]");
 					}
 				}
 			}
@@ -337,7 +341,7 @@ abstract class DataBaseModel extends Model {
 
 		switch ($this->state) {
 			case self::DELETE:
-				$sql = "delete from {$class::$_table} where {$class::$_primaryKey}=" . $this->{$class::$_primaryKey};
+				$sql = "delete from {$class::$_table} where {$class::$_primaryKey}=:id" . $this->{$class::$_primaryKey};
 				$sth = $dbh->prepare($sql);
 				$sth->execute ();
 				if ($sth->errorCode () == 0) {
@@ -346,7 +350,7 @@ abstract class DataBaseModel extends Model {
 				}
 				else {
 					$errors = $sth->errorInfo ();
-					echo ($errors [2]);
+					throw new \Exception("Ошибка удаления записи БД: $errors [2]");
 				}
 				break;
 			case self::UPDATE:
@@ -355,7 +359,7 @@ abstract class DataBaseModel extends Model {
 				}, $attributes ) ) . " where {$class::$_primaryKey}=?";
 				$values = array();
 				foreach ($attributes as $attribute) {
-					$values[] = $this->$attribute;
+					$values[] = $this->_attrValues[$attribute];
 				}
 				$values [] = $this->{$class::$_primaryKey};
 				$sth = $dbh->prepare($sql);
@@ -365,16 +369,15 @@ abstract class DataBaseModel extends Model {
 				}
 				else {
 					$errors = $sth->errorInfo ();
-					echo ($errors [2]);
+					throw new \Exception("Ошибка записи в БД: $errors [2]");
 				}
 				break;
 			case self::INSERT:
 				$sql = "insert into {$class::$_table} (" . join ( ',', $attributes ) . ") values (" . join ( ',', array_map ( function ($attribute) {
-					return '?';
-				}, $attributes ) ) . ")";
+					return '?';	}, $attributes ) ) . ")";
 				$values = array ();
 				foreach ( $attributes as $attribute ) {
-					$values [] = $this->$attribute;
+					$values [] = $this->_attrValues[$attribute];
 				}
 				$sth = $dbh->prepare($sql);
 				$sth->execute ( $values );
@@ -388,7 +391,7 @@ abstract class DataBaseModel extends Model {
 				}
 				else {
 					$errors = $sth->errorInfo ();
-					echo ($errors [2]);
+					throw new \Exception("Ошибка записи в БД: $errors [2]");
 				}
 				break;
 		}

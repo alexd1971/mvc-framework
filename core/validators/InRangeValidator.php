@@ -4,22 +4,17 @@ namespace core\validators;
 class InRangeValidator implements IValidator {
 
 	public function check($params) {
+		$model = $params['model'];
+		$attribute = $params['attribute'];
 		$min = $params['min'];
 		$max = $params['max'];
-		$value = $params['value'];
-		$attribute = isset($params['attribute'])?$params['attribute']:"";
+		$value = $model->$attribute;
+		$result = "";
 		if ($value !== "") {
-			$result = array();
+			$result = false;
 			if (is_numeric($value) && $value >= $min && $value<=$max) {
-				$result['valid'] = true;
+				$result = true;
 			}
-			else {
-				$result['valid'] = false;
-				$result['message'] = isset($params['message'])?$params['message']:"Значение поля \"$attribute\" должно быть числом в промежутке от $min до $max";
-			}
-		}
-		else {
-			$result ["valid"] = true;
 		}
 		return $result;
 	}

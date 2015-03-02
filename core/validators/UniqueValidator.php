@@ -4,33 +4,31 @@ namespace core\validators;
 class UniqueValidator implements IValidator {
 
 	public function check($params) {
-
-		$attribute = $params['attribute'];
-		$value = $params ['value'];
 		$model = $params['model'];
+		$attribute = $params['attribute'];
+		$value = $model->$attribute;
 		$modelClass = get_class($model);
 
-		$result = array ();
-		if ($value || $value === 0) {
+		$result = false;
+		if ($value !== "") {
 			$models = $modelClass::findByAttributes(array(
 					$attribute => $value
 			));
 			if ($models){
-				$result['valid'] = true;
+				$result = true;
 				foreach ($models as $storedModel){
 					if($model->id != $storedModel->id){
-						$result['valid'] = false;
-						$result["message"] = isset($params['message'])?$params['message']:"Значение должно быть уникальным";
+						$result = false;
 						break;
 					}
 				}
 			}
 			else {
-				$result["valid"] = true;
+				$result = true;
 			}
 		}
 		else {
-			$result["valid"] = true;
+			$result = true;
 		}
 		return $result;
 	}

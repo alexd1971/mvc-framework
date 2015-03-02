@@ -44,15 +44,14 @@ abstract class Model {
 	/**
 	 * Конструктор класса.
 	 *
-	 * Аргумент $attributes является ассоциативным массивом, определяющим начальные значения атрибутов модели.
+	 * Аргумент $attributes является ассоциативным массивом, определяющим начальные значения атрибутов.
 	 *
 	 * Пример:
 	 *
 	 * array(
-	 * "attr1" => 'val1',
-	 * "attr2" => 'val2',
-	 * ...
-	 * "attrn" => null // если не нужно инициализировать атрибут, то его значение устанавливается в null
+	 * 		"attr1" => value1,
+	 * 		"attr2" => value2,
+	 * 		...
 	 * )
 	 *
 	 * Если конструктору переданы атрибуты, то модель переходит в статус Model::INSERT
@@ -64,7 +63,7 @@ abstract class Model {
 		if ($class::$_attributes) {
 			$this->state = self::BLANK;
 			foreach ( array_keys($class::$_attributes) as $attribute ) {
-				$this->_attrValues [$attribute] = (array_key_exists ( $attribute, $attributes ) ? $attributes [$attribute] : null);
+				$this->$attribute = (array_key_exists ( $attribute, $attributes ) ? $attributes [$attribute] : null);
 				if($this->$attribute !== null) {
 					$this->state = self::INSERT;
 				}
@@ -96,22 +95,33 @@ abstract class Model {
 	 * @return array
 	 */
 	public function validate() {
+		$validators = MVCF::app()->validators;
 		if ($this->_isValid == self::NOT_VALIDATED) {
 			$class = get_class($this);
-			foreach ($class::$_attributes as $attribute => $rules) {
-				if ($rules) {
-					foreach ($rules as $rule) {
-						$validator = new $rule['validator'];
-						$params = array_key_exists('params', $rule)? $rule['params']:array();
-						$params['attribute'] = $attribute;
-						$params['value'] = $this->$attribute;
-						$params['model'] = $this;
-						$validationResult = $validator->check($params);
-						$this->_validationResults[$attribute] = $validationResult;
-						if (!$validationResult["valid"] && $this->_isValid != self::INVALID) {
-							$this->_isValid = self::INVALID;
+			foreach ($class::$_attributes as $attribute => $config) {
+				if (isset($config['validators']) && $config['validators']) {
+					foreach ($config['validators'] as $key => $value) {
+						$validatorClass = '';
+						if(key_exists($key, $validators)){
+							$validatorClass = $validators[$key];
 						}
-						if(!$validationResult["valid"]) break;
+						else {
+							throw new \Exception("Валидатор '$key' не найден");
+						}
+
+						$validator = new $validatorClass;
+						$params = is_array($value)? $value:array();
+						$params['attribute'] = $attribute;
+						$params['model'] = $this;
+						$result = $validator->check($params);
+						$this->_validationResults[$attribute]['valid'] = $result;
+						if ($result === false) {
+							$this->_validationResults[$attribute]['message'] = isset($value['message'])?$value['message']:"Неверное значение атрибута '$attribute'";
+							if ($this->_isValid != self::INVALID) {
+								$this->_isValid = self::INVALID;
+							}
+							break;
+						}
 					}
 				}
 			}
@@ -152,13 +162,23 @@ abstract class Model {
 	 * @return multitype:
 	 */
 	public function __get($attribute) {
+		$class = get_class ( $this );
 		switch ($attribute) {
 			case "attributes" :
-				$class = get_class ( $this );
 				return array_keys($class::$_attributes);
 			default :
 				if (array_key_exists ( $attribute, $this->_attrValues )) {
-					return $this->_attrValues [$attribute];
+					$value = $this->_attrValues [$attribute];
+					if (isset($class::$_attributes[$attribute]['filters']['get'])) {
+						try {
+							$filter = $class::$_attributes[$attribute]['filters']['get'];
+							$value = $this->$filter($value);
+						}
+						catch (\Exception $e)  {
+							die ("Фильтр get ('$filter') для атрибута '$attribute' не определен");
+						}
+					}
+					return $value;
 				} else {
 					throw new \Exception ( "Атрибут не найден: $attribute" );
 				}
@@ -174,10 +194,20 @@ abstract class Model {
 	 * @param mixed $value
 	 */
 	public function __set($attribute, $value) {
+		$class = get_class($this);
 		switch ($attribute) {
 			default :
-				if (array_key_exists ( $attribute, $this->_attrValues )) {
-					if ($this->_attrValues [$attribute] !== $value) {
+				if (array_key_exists ( $attribute, $class::$_attributes )) {
+					if (isset($class::$_attributes[$attribute]['filters']['set'])) {
+						try {
+							$filter = $class::$_attributes[$attribute]['filters']['set'];
+							$value = $this->$filter($value);
+						}
+						catch (\Exception $e)  {
+							die ("Фильтр set ('$filter') для атрибута '$attribute' не определен");
+						}
+					}
+					if (!isset($this->_attrValues [$attribute]) || $this->_attrValues [$attribute] !== $value) {
 						$this->_attrValues [$attribute] = $value;
 						switch ($this->state) {
 							case self::BLANK:
@@ -226,50 +256,62 @@ abstract class Model {
 		$class = get_class ( $this );
 		if ($attributes) {
 			foreach ( array_keys($class::$_attributes) as $attribute ) {
-				if (array_key_exists ( $attribute, $attributes ) && $this->_attrValues [$attribute] != $attributes [$attribute]) {
-					$this->_attrValues [$attribute] = $attributes [$attribute];
-					$this->state = self::UPDATE;
+				if (array_key_exists ( $attribute, $attributes )) {
+					$this->$attribute = $attributes [$attribute];
 				}
 			}
+		}
+	}
+	/**
+	 * Функция возвращает значение атрибута без обработки фильтрами, если таковые для данного атрибута сконфигурированы
+	 *
+	 * @param string $attribute
+	 * @throws \Exception
+	 * @return multitype:
+	 */
+	public function getRawAttribute($attribute) {
+		if (array_key_exists ( $attribute, $this->_attrValues )) {
+			$value = $this->_attrValues [$attribute];
+			return $value;
+		} else {
+			throw new \Exception ( "Атрибут не найден: $attribute" );
+		}
+	}
+
+	public function setRawAttribute($attribute, $value) {
+		if (array_key_exists($attribute, $this::$_attributes)){
+			$this->_attrValues[$attribute] = $value;
+		} else {
+			throw new \Exception ( "Атрибут не найден: $attribute" );
 		}
 	}
 	/**
 	 * Описание атрибутов модели с валидаторами для проверки соответствия значений атрибутов  требованиям
 	 * Валидаторы должны реализовывать интерфейс IValidator
 	 *
-	 * Общий вид описания атрибутов приведен ниже. Помимо параметров, описанных в массиве, валидатору передается дополнительно параметр "value",
-	 * содержащий значение атрибута. Параметр "message" определяет текст сообщения в случае, если атрибут имеет недопустимое значение.
+	 * Общий вид описания атрибутов приведен ниже. Помимо параметров, описанных в массиве, валидатору передается дополнительно параметр "attribute",
+	 * содержащий название атрибута и параметр "model", содержащий ссылку на модель данных. Параметр "message" определяет текст сообщения в случае,
+	 * если атрибут имеет недопустимое значение.
+	 *
 	 * Если параметр "message" не указан, то в случае недопустимости значения атрибута валидатор вернет сообщение, определенное
 	 * в самом валидаторе.
+	 *
 	 * Проверка допустимости атрибута прекращается, как только встречается первое невыполнившееся правило
 	 *
 	 * array(
-	 *
-	 * 		"attribute1" => array(
-	 * 			array(
-	 * 				"validator" => '\validator\Class1',
-	 * 				"params" => array(
-	 * 					"param1" => value1,
-	 * 					"param2 => value2,
-	 * 					...
-	 * 				)
-	 * 			),	// Первое правило валидации для атрибута
-	 *
-	 * 			array(
-	 * 				"validator" => '\validator\Class2',
-	 * 				"params" => array(
-	 * 					"param3" => value3,
-	 * 					"message" => "Информационное сообщение для пользователя",
-	 * 					...
-	 * 				)
-	 * 			),	// Второе правило валидации для атрибута
-	 * 			...
+	 * 		"attr1" => array (
+	 * 			"validators" => array(
+	 * 				"validator1" => array("param1" => value1, "param2" => value2,..., "message" => "Сообщение об ошибке"),
+	 * 				"validator2" => array(...)
+	 * 			),
+	 * 			"filters" => array(
+	 * 				"get" => "function_get",
+	 * 				"set" => "function_set"
+	 * 			)
 	 * 		),
-	 *
-	 * 		"atribute2" => array(
-	 * 			array(...),
-	 * 			...
-	 * 		)
+	 * 		"attr2" => array(...),
+	 * 		...
+	 * 		"attrn" => array() // если не нужно описывать атрибут, то его значение устанавливается в array()
 	 * )
 	 *
 	 * @var array

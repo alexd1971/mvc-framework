@@ -7,20 +7,17 @@ namespace core\validators;
  *
  */
 class IntegerValidator implements IValidator {
+
 	public function check($params) {
-		$value = $params ['value'];
-		$attribute = isset($params['attribute'])?$params['attribute']:"";
-		if($value || $value === 0){
-			$result = array ();
+		$model = $params['model'];
+		$attribute = $params['attribute'];
+		$value = $model->$attribute;
+		$result = true;
+		if($value !== ""){
+			$result = false;
 			if (is_numeric ( $value ) && gettype ( $value + 0 ) == "integer") {
-				$result ["valid"] = true;
-			} else {
-				$result ["valid"] = false;
-				$result ["message"] = "Значение поля \"$attribute\" должно быть целочисленным";
+				$result = true;
 			}
-		}
-		else {
-			$result ["valid"] = true;
 		}
 		return $result;
 	}

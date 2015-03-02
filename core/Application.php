@@ -28,7 +28,20 @@ class Application {
 
 		$this->_defaultController = $this->config['defaultController'];
 
+		$this->_validators = array_merge_recursive(MVCF::$config['validators'], $this->config['validators']);
+
 		$this->_request = Request::getInstance ();
+
+		$scheme = isset($this->request->http_scheme) ? $this->request->http_scheme : (
+				(
+						(isset($this->request->https) && $this->request->https != 'off') ||
+						443 == $this->request->server_port
+				) ? 'https' : 'http'
+
+		);
+
+		$this->request->scheme = $scheme;
+
 		if(isset($this->request->params)){
 			if (isset($this->request->params[0])) {
 				if(in_array($this->request->params[0], array_keys($this->config['modules']))){
@@ -166,6 +179,8 @@ class Application {
 				return $this->_controller;
 			case 'action':
 				return $this->_action;
+			case 'validators':
+				return $this->_validators;
 			default:
 				throw new \Exception ("Свойство $attribute не найдено");
 		}
@@ -224,12 +239,18 @@ class Application {
 			return $this->_dbConnections [$db];
 		} elseif (array_key_exists ( $db, $this->config ['dbConnections'] )) {
 			$dbConfig = $this->config ['dbConnections'] [$db];
-			$dsn = $dbConfig ['driver'] . ":host=" . $dbConfig ['host'] . ";" . ($dbConfig ['port'] ? "port=" . $dbConfig ['port'] . ";" : "") . "dbname=" . $dbConfig ['dbname'] . ";user=" . $dbConfig ['user'] . ";password=" . $dbConfig ['password'];
+			$dsn = $dbConfig ['driver'] . ":host=" . $dbConfig ['host'] . ";" . ($dbConfig ['port'] ? "port=" . $dbConfig ['port'] . ";" : "") . "dbname=" . $dbConfig ['dbname'];
+			$user = $dbConfig['user'];
+			$password = $dbConfig['password'];
+			$options = isset($dbConfig['options'])?$dbConfig['options']:array();
 			try {
-				$dbh = new \PDO ( $dsn );
+				$dbh = new \PDO ( $dsn, $user, $password, $options );
 				if ($dbh) {
 					$this->_dbConnections [$db] = $dbh;
 					return $this->_dbConnections [$db];
+				}
+				else {
+					echo "Не удалось подключиться к серверу: " . $dsn;
 				}
 			} catch ( \PDOException $e ) {
 				// TODO: Вставить обработку исключения
@@ -302,12 +323,12 @@ class Application {
 	 */
 	public function createURL ($path) {
 		$url = "";
-		if (preg_match('@^http://.*$@', $path) === 1){
+		if (preg_match('@^http[s]?://.*$@', $path) === 1){
 			$url = $path;
 		}
 		else {
 			$request = MVCF::app()->request;
-			$url ='http://' . $request->http_host . '/' . (MVCF::$indexDir?MVCF::$indexDir . '/':'') . ltrim($path, "/");
+			$url = $request->scheme . '://' . $request->http_host . '/' . (MVCF::$indexDir?MVCF::$indexDir . '/':'') . ltrim($path, "/");
 		}
 		return $url;
 	}
@@ -319,10 +340,10 @@ class Application {
 	public function redirect($url) {
 		$request = MVCF::app()->request;
 		$user = MVCF::app()->user;
-		$return_url = 'http://' . $request->http_host . $request->request_uri;
+		$return_url = $request->scheme . '://' . $request->http_host . $request->request_uri;
 		$user->return_url = $return_url;
 		$user->storeInSession();
-		header("Location: $url");
+		header("Location: " . $this->createURL($url));
 		exit();
 
 	}
@@ -363,6 +384,12 @@ class Application {
 	 * @var string
 	 */
 	protected $_action = "";
+	/**
+	 * Список зарегистрированных валидаторов
+	 *
+	 * @var array
+	 */
+	protected $_validators = array();
 	/**
 	 * Дополнительные параметры для выполнения действия
 	 *
@@ -475,7 +502,7 @@ class Application {
 			if ($assetConfig['type'] == 'javascript') {
 				$metaTag = "<script type=\"text/javascript\" ";
 				if (isset ($assetConfig['url'])) {
-					$metaTag .= "src=\"/" . (MVCF::$indexDir?MVCF::$indexDir . "/":"") . $assetConfig['url'] . "\"></script>\n";
+					$metaTag .= "src=\"" . $this->createURL($assetConfig['url']) . "\"></script>\n";
 				}
 				elseif (isset ($assetConfig['text'])) {
 					$metaTag .= ">\n" . $assetConfig['text'] . "</script>\n";
@@ -483,7 +510,7 @@ class Application {
 			}
  			if ($assetConfig['type'] == 'css') {
 				if (isset ($assetConfig['url'])) {
-					$metaTag = "<link rel=\"stylesheet\" href=\"/"  . (MVCF::$indexDir?MVCF::$indexDir . "/":"") . $assetConfig['url']. "\">\n";
+					$metaTag = "<link rel=\"stylesheet\" href=\"" . $this->createURL($assetConfig['url']) . "\">\n";
 				}
 				elseif (isset ($assetConfig['text'])) {
 					$metaTag = "<style type=\"text/css\">\n" . $assetConfig['text'] . "</style>\n";

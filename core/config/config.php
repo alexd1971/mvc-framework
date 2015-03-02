@@ -20,10 +20,16 @@ return array (
 		"applicationClass" => "\core\Application",
 
 		/**
-		 * Дополнительные пути для поиска классов
+		 * Конфигурация зарегистрированных во фреймворке валидаторов
 		 */
-
-		"include_path" => array (),
+		"validators" => array (
+				"email"		=> '\core\validators\EmailValidator',
+				"in_range"	=> '\core\validators\InRangeValidator',
+				"integer"	=> '\core\validators\IntegerValidator',
+				"required"	=> '\core\validators\RequiredValidator',
+				"string"	=> '\core\validators\StringValidator',
+				"unique"	=> '\core\validators\UniqueValidator'
+		),
 
 		/**
 		 * Стандартная конфигурация метаданных фреймворка.

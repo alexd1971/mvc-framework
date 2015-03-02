@@ -4,6 +4,12 @@ namespace core;
 
 class User {
 	/**
+	 * Идентификатор пользователя (если есть)
+	 *
+	 * @var unknown
+	 */
+	public $id;
+	/**
 	 * Имя пользователя
 	 *
 	 * @var string

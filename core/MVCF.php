@@ -32,13 +32,6 @@ class MVCF {
 		preg_match ( '@^/(.*)/index.php$@', $_SERVER ['SCRIPT_NAME'], $matches );
 		self::$indexDir = $matches ? $matches [1] : '';
 		/*
-		 * Если сконфигурированы дополнительные каталоги для поиска файлов, то добавляем их для поиска
-		 */
-		if (isset(self::$config['include_path'])){
-			$path = implode ( PATH_SEPARATOR, self::$config ['include_path'] );
-			set_include_path ( get_include_path () . PATH_SEPARATOR . $path );
-		}
-		/*
 		 * Устанавливаем загрузчик классов
 		 */
 		include $_SERVER['DOCUMENT_ROOT'] . '/'. self::$indexDir . '/' . self::$config ['loader'];

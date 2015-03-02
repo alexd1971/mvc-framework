@@ -11,19 +11,12 @@ namespace core\validators;
 class StringValidator implements IValidator {
 
 	public function check($params) {
-		$value = $params['value'];
-		if($value) {
-			$result = array();
-			if(is_string($value)){
-				$result["valid"] = true;
-			}
-			else {
-				$result["valid"] = false;
-				$result["message"] = "Значение должно быть строкой";
-			}
-		}
-		else {
-			$result["valid"] = true;
+		$model = $params['model'];
+		$attribute = $params['attribute'];
+		$value = $model->$attribute;
+		$result = false;
+		if(is_string($value)){
+				$result = true;
 		}
 
 		return $result;

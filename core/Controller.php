@@ -37,10 +37,10 @@ class Controller {
 			} elseif ($rule ['access'] === "deny" && isset ( $rule ['redirect'] )) {
 				$app->redirect ( $app->createURL ( $rule ['redirect'] ) );
 			} elseif ($rule ['access'] === "deny") {
-				$app->redirect('/errors/error_403');
+				$app->redirect('errors/error_403');
 			}
 		} else {
-			$app->redirect('/errors/error_404');
+			$app->redirect('errors/error_404');
 		}
 	}
 	/**
