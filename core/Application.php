@@ -16,7 +16,7 @@ class Application {
 	 */
 	public function __construct() {
 
-		$this->_baseDir = (MVCF::$indexDir?MVCF::$indexDir . '/':'') . MVCF::$config ['appNamespace'];
+		$this->_baseDir = MVCF::$indexDir . MVCF::$config ['appNamespace'];
 
 		$this->_config = include $_SERVER['DOCUMENT_ROOT'] . '/' . $this->_baseDir . '/config/config.php';
 
@@ -245,6 +245,7 @@ class Application {
 			$options = isset($dbConfig['options'])?$dbConfig['options']:array();
 			try {
 				$dbh = new \PDO ( $dsn, $user, $password, $options );
+                $dbh -> exec("set names utf8");
 				if ($dbh) {
 					$this->_dbConnections [$db] = $dbh;
 					return $this->_dbConnections [$db];
@@ -328,7 +329,7 @@ class Application {
 		}
 		else {
 			$request = MVCF::app()->request;
-			$url = $request->scheme . '://' . $request->http_host . '/' . (MVCF::$indexDir?MVCF::$indexDir . '/':'') . ltrim($path, "/");
+			$url = $request->scheme . '://' . $request->http_host  . MVCF::$indexDir . ltrim($path, "/");
 		}
 		return $url;
 	}

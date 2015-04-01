@@ -69,7 +69,7 @@ abstract class Model {
 				}
 			}
 		} else {
-			throw\Exception ( "В создаваемой модели " . $class . " не определено ни одного атрибута" );
+			throw new \Exception ( "В создаваемой модели " . $class . " не определено ни одного атрибута" );
 		}
 	}
 	/**

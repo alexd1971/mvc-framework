@@ -30,11 +30,11 @@ class MVCF {
 		 * Определяем корневой каталог
 		 */
 		preg_match ( '@^/(.*)/index.php$@', $_SERVER ['SCRIPT_NAME'], $matches );
-		self::$indexDir = $matches ? $matches [1] : '';
+		self::$indexDir = '/' . ($matches ? $matches [1] . '/' : '');
 		/*
 		 * Устанавливаем загрузчик классов
 		 */
-		include $_SERVER['DOCUMENT_ROOT'] . '/'. self::$indexDir . '/' . self::$config ['loader'];
+		include $_SERVER['DOCUMENT_ROOT'] . '/'. self::$indexDir .  self::$config ['loader'];
 		spl_autoload_register ( '\core\Loader::autoLoad' );
 		/*
 		 * Создаем новое приложение

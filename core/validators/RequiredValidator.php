@@ -7,9 +7,9 @@ class RequiredValidator implements IValidator {
 		$model = $params['model'];
 		$attribute = $params['attribute'];
 		$value = $model->$attribute;
-		$result = false;
-		if ($value !== '') {
-			$result = true;
+		$result = true;
+		if ($value === null || $value === "") {
+			$result = false;
 		}
 		return $result;
 	}

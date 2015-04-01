@@ -46,6 +46,7 @@ abstract class DataBaseModel extends Model {
 			}
 			$where .= "{$class::$_alias}.$key=" . (is_string ( $value ) ? "'$value'" : $value);
 		}
+
 		$order = "";
 		if ($sort) {
 					foreach ($sort as $attribute => $direction){
@@ -71,9 +72,9 @@ abstract class DataBaseModel extends Model {
 			if ($where !== "") {
 				$where .= "\nand ";
 			}
-			$where .= "{$class::$_alias}.$key=" . (is_string ( $value ) ? "'$value'" : $value);
+			$where .= "$key=" . (is_string ( $value ) ? "'$value'" : $value);
 		}
-		$sql = "delete from {$class::$_table} {$class::$_alias}\n" . ($where?"where $where":"");
+		$sql = "delete from {$class::$_table}\n" . ($where?"where $where":"");
 		$dbh = MVCF::app ()->getDBConnection ( $class::$_dbConnection );
 		$stmt = $dbh->prepare ( $sql );
 		$stmt->execute ();
@@ -182,7 +183,7 @@ abstract class DataBaseModel extends Model {
 			}
 		} else {
 			$errors = $stmt->errorInfo ();
-			echo ($errors [2]);
+			throw new \Exception($errors[2]);
 		}
 		return $models;
 	}
@@ -271,7 +272,7 @@ abstract class DataBaseModel extends Model {
 				}
 				else {
 					$errors = $sth->errorInfo ();
-					throw new \Exception("Ошибка записи в БД: $errors [2]");
+					throw new \Exception("Ошибка записи в БД: {$errors[2]}");
 				}
 			}
 			if ($delete) {
@@ -292,7 +293,7 @@ abstract class DataBaseModel extends Model {
 				}
 				else {
 					$errors = $sth->errorInfo ();
-					throw new \Exception("Ошибка удаления записи БД: $errors [2]");
+					throw new \Exception("Ошибка удаления записи БД: {$errors[2]}");
 				}
 
 			}
@@ -313,7 +314,7 @@ abstract class DataBaseModel extends Model {
 					}
 					else {
 						$errors = $sth->errorInfo ();
-						throw new \Exception("Ошибка записи в БД: $errors [2]");
+						throw new \Exception("Ошибка записи в БД: {$errors[2]}");
 					}
 				}
 			}
@@ -391,7 +392,7 @@ abstract class DataBaseModel extends Model {
 				}
 				else {
 					$errors = $sth->errorInfo ();
-					throw new \Exception("Ошибка записи в БД: $errors [2]");
+					throw new \Exception("Ошибка записи в БД: {$errors[2]}");
 				}
 				break;
 		}
